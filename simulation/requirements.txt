@@ -1,0 +1,5 @@
+mujoco>=3.2.0
+numpy>=1.24
+onnxruntime>=1.16
+PyYAML>=6.0
+cyclonedds>=0.10

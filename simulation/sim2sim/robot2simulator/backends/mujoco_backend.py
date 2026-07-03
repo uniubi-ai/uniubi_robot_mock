@@ -243,9 +243,6 @@ class MujocoBackend(SimBackend):
         return bool(viewer.is_running())
 
     def viewer_sync(self, viewer: Any) -> None:
-        # 新增画面焦点跟随
-        if self._data.qpos.shape[0] >= 3:
-            viewer.cam.lookat[:] = self._data.qpos[:3]
         viewer.sync()
 
     def set_fault_visual(self, joint_index: Optional[int], active: bool) -> None:

@@ -131,7 +131,7 @@ cd simulation
 # 配置环境变量
 export PYTHONPATH=$(pwd)
 # 启动mujoco仿真器
-PYTHONUNBUFFERED=1 python sim2sim/robot2simulator/run_bridge.py --config sim2sim/configs/uniubi_robot2sim.yaml --print-ctrl --print-ctrl-hz 10 --viewer --backend mujoco
+PYTHONUNBUFFERED=1 python sim2sim/robot2simulator/run_bridge.py --config sim2sim/configs/uniubi_cyvet.yaml --print-ctrl --print-ctrl-hz 10 --viewer --backend mujoco
 ```
 
 ### 2.2 方式二：isaacgym
@@ -162,7 +162,7 @@ cd simulation
 # 配置环境变量
 export PYTHONPATH=$(pwd)
 # 启动isaacgym仿真器
-PYTHONUNBUFFERED=1 python sim2sim/robot2simulator/run_bridge.py --config sim2sim/configs/uniubi_robot2sim.yaml --print-ctrl --print-ctrl-hz 10 --viewer --backend isaacgym
+PYTHONUNBUFFERED=1 python sim2sim/robot2simulator/run_bridge.py --config sim2sim/configs/uniubi_cyvet.yaml --print-ctrl --print-ctrl-hz 10 --viewer --backend isaacgym
 ```
 
 ## 3. 注意事项
