@@ -11,7 +11,7 @@
 
       <geom condim="1" contype="0" conaffinity="1"/>
       <joint axis="0 1 0" armature="0.005" damping="0.05"/>
-      <position forcerange="-48 48" kp="50"/>
+      <position forcerange="-48 48" inheritrange="1.5" kp="50"/>
 
       <default class="abduction">
         <joint axis="1 0 0" range="-0.5233 0.5233" armature="0.018983" damping="0.240816" frictionloss="0.132206"  margin="0.02" solreflimit="0.001 1"/>
@@ -265,6 +265,21 @@
   </worldbody>
 
   
+  <!-- <actuator>
+    <motor class="abduction" name="FL_hip" joint="FL_hip_joint" ctrlrange="-48 48" gear="1" />
+    <motor class="hip" name="FL_thigh" joint="FL_thigh_joint" ctrlrange="-48 48" gear="1"/>
+    <motor class="knee" name="FL_calf" joint="FL_calf_joint" ctrlrange="-48 48" gear="1"/>
+    <motor class="abduction" name="FR_hip" joint="FR_hip_joint" ctrlrange="-48 48" gear="1"/>
+    <motor class="hip" name="FR_thigh" joint="FR_thigh_joint" ctrlrange="-48 48" gear="1"/>
+    <motor class="knee" name="FR_calf" joint="FR_calf_joint" ctrlrange="-48 48" gear="1"/>
+    <motor class="abduction" name="RL_hip" joint="RL_hip_joint" ctrlrange="-48 48" gear="1"/>
+    <motor class="hip" name="RL_thigh" joint="RL_thigh_joint" ctrlrange="-48 48" gear="1"/>
+    <motor class="knee" name="RL_calf" joint="RL_calf_joint" ctrlrange="-48 48" gear="1"/>
+    <motor class="abduction" name="RR_hip" joint="RR_hip_joint" ctrlrange="-48 48" gear="1"/>
+    <motor class="hip" name="RR_thigh" joint="RR_thigh_joint" ctrlrange="-48 48" gear="1"/>
+    <motor class="knee" name="RR_calf" joint="RR_calf_joint" ctrlrange="-48 48" gear="1"/>
+  </actuator> -->
+
   <actuator>
     <position class="abduction" name="FL_hip" joint="FL_hip_joint" />
     <position class="hip" name="FL_thigh" joint="FL_thigh_joint"/>

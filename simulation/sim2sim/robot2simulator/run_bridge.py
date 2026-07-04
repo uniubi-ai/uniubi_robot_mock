@@ -112,6 +112,14 @@ def _make_backend_mujoco(
     control_cfg = raw.get("control", {}) or {}
     stiffness = np.asarray(control_cfg.get("stiffness", []), dtype=np.float32)
     damping = np.asarray(control_cfg.get("damping", []), dtype=np.float32)
+    torque_limits_arr = np.asarray(raw.get("torque_limits", []), dtype=np.float32)
+    torque_limits = None if torque_limits_arr.size == 0 else torque_limits_arr
+    actuator_model_cfg = raw.get("actuator_model", {}) or {}
+
+    def _optional_actuator_param(name: str):
+        if name not in actuator_model_cfg:
+            return None
+        return np.asarray(actuator_model_cfg[name], dtype=np.float32)
 
     init_joint_pos = raw.get("initial_joint_pos", None)
     if init_joint_pos is None:
@@ -136,6 +144,15 @@ def _make_backend_mujoco(
         settling_steps=settling_steps,
         stiffness=stiffness,
         damping=damping,
+        torque_limits=torque_limits,
+        armature=_optional_actuator_param("armature"),
+        torque_curve_x1=_optional_actuator_param("x1"),
+        torque_curve_x2=_optional_actuator_param("x2"),
+        torque_curve_y1=_optional_actuator_param("y1"),
+        torque_curve_y2=_optional_actuator_param("y2"),
+        friction_static=_optional_actuator_param("friction_static"),
+        friction_dynamic=_optional_actuator_param("friction_dynamic"),
+        activation_velocity=_optional_actuator_param("activation_velocity"),
         dump_actuators=bool(args.dump_actuators),
         mj_debug=bool(args.mj_debug),
         mj_debug_hz=float(args.mj_debug_hz),

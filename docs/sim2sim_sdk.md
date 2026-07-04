@@ -89,7 +89,7 @@ Use `ip -br addr` to find the interface that should carry DDS traffic.
 
 ## Optional Virtual Remote Control
 
-The ONNX helper uses `--cmd-x/--cmd-y/--cmd-yaw` by default. It can also read `motion/trc` frames. To publish a virtual remote control stream:
+The ONNX helper uses `--cmd-x/--cmd-y/--cmd-yaw` by default. This is the normal path for low-level simulation. It can also read `rt/motion/trc` frames if you want to drive the command with a virtual remote control:
 
 ```bash
 cd /path/to/uniubi_robot_mock/simulation
@@ -97,9 +97,11 @@ export PYTHONPATH=$(pwd)
 
 python scripts/publish_trc_keyboard.py \
   --domain 42 \
-  --topic motion/trc \
+  --topic rt/motion/trc \
   --rate 50
 ```
+
+The local simulation uses action id `1` by default. You can override it with `--controller <id>` if needed.
 
 Keyboard mapping:
 
@@ -107,6 +109,12 @@ Keyboard mapping:
 - `a/d`: lateral
 - `q/e`: yaw
 - `space` or `x`: zero axes and buttons
+- `1`: handstand (`LB+A`)
+- `2`: standing (`Back`)
+- `3`: walking (`Start+Y`)
+- `4`: laying (`Start+A`)
+- `5`: waveBody (`LB+Start`)
+- `z`: emergencyStop (`LB+RB`)
 
 ## Troubleshooting
 
@@ -116,4 +124,4 @@ If DDS topics do not match, keep the defaults on both sides:
 
 - control: `rt/motion/control`
 - observed: `rt/motion/observed`
-- TRC: `motion/trc`
+- TRC: `rt/motion/trc`
