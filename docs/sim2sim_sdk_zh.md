@@ -89,7 +89,7 @@ source scripts/setup_dds.sh <iface>
 
 ## 可选：虚拟遥控
 
-ONNX helper 默认使用 `--cmd-x/--cmd-y/--cmd-yaw` 作为控制指令。也可以读取 `motion/trc`：
+ONNX helper 默认使用 `--cmd-x/--cmd-y/--cmd-yaw` 作为控制指令，这是低级控制仿真的常规路径。如果希望用虚拟遥控来给速度指令，也可以读取 `rt/motion/trc`：
 
 ```bash
 cd /path/to/uniubi_robot_mock/simulation
@@ -97,9 +97,11 @@ export PYTHONPATH=$(pwd)
 
 python scripts/publish_trc_keyboard.py \
   --domain 42 \
-  --topic motion/trc \
+  --topic rt/motion/trc \
   --rate 50
 ```
+
+本地仿真默认使用 action id `1`。如需调整，可以传入 `--controller <id>`。
 
 按键：
 
@@ -107,6 +109,12 @@ python scripts/publish_trc_keyboard.py \
 - `a/d`：横移
 - `q/e`：转向
 - `space` 或 `x`：归零
+- `1`：handstand（`LB+A`）
+- `2`：standing（`Back`）
+- `3`：walking（`Start+Y`）
+- `4`：laying（`Start+A`）
+- `5`：waveBody（`LB+Start`）
+- `z`：emergencyStop（`LB+RB`）
 
 ## 常见问题
 
@@ -116,4 +124,4 @@ python scripts/publish_trc_keyboard.py \
 
 - control: `rt/motion/control`
 - observed: `rt/motion/observed`
-- TRC: `motion/trc`
+- TRC: `rt/motion/trc`

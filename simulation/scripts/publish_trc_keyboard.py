@@ -31,12 +31,18 @@ ANALOG_FIELDS = ("stickLX", "stickLY", "stickRX", "stickRY", "triggerL", "trigge
 PRESETS = {
     "zero": {},
     "emergency": {"lb": 1, "rb": 1},
-    "laying": {"lb": 1, "a": 1},
-    "walking": {"lb": 1, "start": 1},
-    "standing": {"lb": 1, "back": 1},
-    "frontflip": {"lb": 1, "x": 1},
-    "backflip": {"lb": 1, "b": 1},
-    "sideflip": {"lb": 1, "y": 1},
+    "bipedStand": {"lb": 1, "y": 1},
+    "handstand": {"lb": 1, "a": 1},
+    "laying": {"start": 1, "a": 1},
+    "walking": {"start": 1, "y": 1},
+    "standing": {"back": 1},
+    "waveBody": {"lb": 1, "start": 1},
+    "peakLoadStand": {"y": 1, "triggerL": 1.0},
+    "jumpFrontflip": {"rb": 1, "y": 1},
+    "jumpSideflip": {"rb": 1, "b": 1, "triggerR": -1.0},
+    "jumpBackflip": {"rb": 1, "a": 1, "triggerR": -1.0},
+    "jumpDoubleBackflip": {"rb": 1, "a": 1, "triggerR": 1.0},
+    "jumpDoubleSideflip": {"rb": 1, "b": 1, "triggerR": 1.0},
 }
 
 
@@ -53,7 +59,7 @@ def _make_message(payload: dict[str, float | int]):
     return _idl_make(
         RemoteControl_,
         controller=int(payload.get("controller") or 0),
-        timestamp=int(time.time() * 1_000_000),
+        timestamp=int(time.time() * 1_000),
         back=int(payload.get("back", 0)),
         start=int(payload.get("start", 0)),
         lb=int(payload.get("lb", 0)),
@@ -132,8 +138,9 @@ def _print_help() -> None:
         "TRC keyboard controls:\n"
         "  w/s: forward/back (stickLY)    a/d: lateral (stickRX)\n"
         "  q/e: yaw (stickLX)             space: zero axes/buttons\n"
-        "  1: laying(LB+A)  2: standing(LB+Back)  3: walking(LB+Start)\n"
-        "  z: emergency(LB+RB)            x: zero frame\n"
+        "  1: handstand(LB+A)  2: standing(Back)  3: walking(Start+Y)\n"
+        "  4: laying(Start+A)  5: waveBody(LB+Start)\n"
+        "  z: emergency(LB+RB) x: zero frame\n"
         "  Ctrl-C: exit\n",
         flush=True,
     )
@@ -159,7 +166,7 @@ def _apply_key(payload: dict[str, float | int], key: str, controller: int) -> fl
     elif key == "1":
         payload.clear()
         payload.update(_build_payload(controller))
-        payload.update(PRESETS["laying"])
+        payload.update(PRESETS["handstand"])
         release_at = time.monotonic() + 0.2
     elif key == "2":
         payload.clear()
@@ -171,6 +178,16 @@ def _apply_key(payload: dict[str, float | int], key: str, controller: int) -> fl
         payload.update(_build_payload(controller))
         payload.update(PRESETS["walking"])
         release_at = time.monotonic() + 0.2
+    elif key == "4":
+        payload.clear()
+        payload.update(_build_payload(controller))
+        payload.update(PRESETS["laying"])
+        release_at = time.monotonic() + 0.2
+    elif key == "5":
+        payload.clear()
+        payload.update(_build_payload(controller))
+        payload.update(PRESETS["waveBody"])
+        release_at = time.monotonic() + 0.2
     elif key == "z":
         payload.clear()
         payload.update(_build_payload(controller))
@@ -180,10 +197,21 @@ def _apply_key(payload: dict[str, float | int], key: str, controller: int) -> fl
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Publish virtual RemoteControl_ frames to motion/trc.")
+    parser = argparse.ArgumentParser(description="Publish virtual RemoteControl_ frames to rt/motion/trc.")
     parser.add_argument("--domain", type=int, default=42)
-    parser.add_argument("--topic", default="motion/trc")
-    parser.add_argument("--controller", type=int, default=1)
+    parser.add_argument("--topic", default="rt/motion/trc")
+    parser.add_argument(
+        "--raw-action-id",
+        type=int,
+        default=None,
+        help="Override the local simulation action id. Alias of --controller.",
+    )
+    parser.add_argument(
+        "--controller",
+        type=int,
+        default=1,
+        help="RemoteControl_.controller value for local simulation.",
+    )
     parser.add_argument("--rate", type=float, default=50.0)
     parser.add_argument("--reliability", choices=["BEST_EFFORT", "RELIABLE"], default="BEST_EFFORT")
     parser.add_argument("--depth", type=int, default=1)
@@ -191,13 +219,17 @@ def main() -> int:
     parser.add_argument("--duration", type=float, default=0.0, help="Seconds to publish; 0 means until Ctrl-C.")
     args = parser.parse_args()
 
+    raw_action_id = args.raw_action_id if args.raw_action_id is not None else args.controller
+    if int(raw_action_id) <= 0:
+        parser.error("--controller/--raw-action-id must be positive.")
+
     publisher = TrcPublisher(
         domain=args.domain,
         topic=args.topic,
         reliability=args.reliability,
         depth=args.depth,
     )
-    payload = _build_payload(args.controller)
+    payload = _build_payload(int(raw_action_id))
     if args.preset:
         payload.update(PRESETS[args.preset])
 
@@ -214,17 +246,17 @@ def main() -> int:
                 if interactive:
                     key = _read_key()
                     if key:
-                        release_at = _apply_key(payload, key, args.controller) or release_at
+                        release_at = _apply_key(payload, key, int(raw_action_id)) or release_at
                 if release_at and time.monotonic() >= release_at:
                     payload.clear()
-                    payload.update(_build_payload(args.controller))
+                    payload.update(_build_payload(int(raw_action_id)))
                     release_at = 0.0
                 publisher.publish(payload)
                 time.sleep(period)
     except KeyboardInterrupt:
         pass
 
-    zero = _build_payload(args.controller)
+    zero = _build_payload(int(raw_action_id))
     for _ in range(3):
         publisher.publish(zero)
         time.sleep(period)
