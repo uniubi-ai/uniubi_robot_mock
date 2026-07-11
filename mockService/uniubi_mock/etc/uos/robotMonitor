@@ -1,0 +1,19 @@
+{
+    "log": {
+        "logPath": "/uniubi_mock/data/logger/log",
+        "bufferSize": 4096,
+        "timeout": 2000,
+        "logCount": 8,
+        "fileSize": 20480000,
+        "maxClients": 12,
+        "socketPath": "/tmp/logServer.sock"
+    },
+    "watchDog": {
+        "enable": false,
+        "node": "/dev/watchdog",
+        "maxTimeout": 30
+    },
+    "roudi": {
+        "file": "/uniubi_mock/etc/uos/roudi_config.toml"
+    }
+}

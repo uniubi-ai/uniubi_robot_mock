@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<CycloneDDS
+  xmlns="https://cdds.io/config"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="https://cdds.io/config https://raw.githubusercontent.com/eclipse-cyclonedds/cyclonedds/master/etc/cyclonedds.xsd"
+>
+  <Domain Id="42">
+    <General>
+      <Interfaces>
+        <!-- host 域网卡需对应虚拟机自身网卡名称，常见虚拟机环境为 enp1s0。 -->
+        <NetworkInterface name="enp1s0" priority="3" multicast="default" presence_required="false" />
+        <NetworkInterface name="eth0" priority="3" multicast="default" presence_required="false" />
+        <NetworkInterface name="wlan0" priority="3" multicast="default" presence_required="false" />
+      </Interfaces>
+      <AllowMulticast>true</AllowMulticast>
+      <MaxMessageSize>65500B</MaxMessageSize>
+    </General>
+
+    <SharedMemory>
+      <Enable>false</Enable>
+      <LogLevel>info</LogLevel>
+    </SharedMemory>
+
+    <Tracing>
+      <Verbosity>none</Verbosity>
+    </Tracing>
+  </Domain>
+</CycloneDDS>
+

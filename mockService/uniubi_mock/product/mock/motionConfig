@@ -1,0 +1,58 @@
+{
+    "motionControl": {
+        "enable": {
+            "trc": false,
+            "uwb": true
+        }
+    },
+    "motorLimit": [
+        [
+            {"kdRatio": 0.05,"kp": 0,"maxTorqueNm": 40},
+            {"kdRatio": 0.05,"kp": 0,"maxTorqueNm": 40},
+            {"kdRatio": 0.05,"kp": 0,"maxTorqueNm": 40}
+        ],
+        [
+            {"kdRatio": 0.05,"kp": 0,"maxTorqueNm": 40},
+            {"kdRatio": 0.05,"kp": 0,"maxTorqueNm": 40},
+            {"kdRatio": 0.05,"kp": 0,"maxTorqueNm": 40}
+        ],
+        [
+            {"kdRatio": 0.05,"kp": 0,"maxTorqueNm": 40},
+            {"kdRatio": 0.05,"kp": 0,"maxTorqueNm": 40},
+            {"kdRatio": 0.05,"kp": 0,"maxTorqueNm": 40}
+        ],
+        [
+            {"kdRatio": 0.05,"kp": 0,"maxTorqueNm": 40},
+            {"kdRatio": 0.05,"kp": 0,"maxTorqueNm": 40},
+            {"kdRatio": 0.05,"kp": 0,"maxTorqueNm": 40}
+        ]
+    ],
+    "tempConfig": {
+        "workMode": "idle",
+        "motionControl": {
+            "controlled": false,
+            "controller": "",
+            "id": 0,
+            "roleId": ""
+        },
+        "imuControl": {
+            "enable": true,
+            "rollDir": 1,
+            "pitchDir": 1,
+            "yawDir": 1,
+            "rollOffset": 0,
+            "pitchOffset": 0,
+            "yawOffset": 0,
+			"accelDiff":0.1
+        },
+        "motorControl": {
+            "enable": false,
+            "params": {
+                "overCurrent": 200,
+                "pdRate": 500,
+                "workMode": 5
+            }
+        }
+    }
+}
+

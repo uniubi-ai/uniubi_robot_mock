@@ -1,0 +1,49 @@
+# RouDi Configuration File for RobotService
+# This file configures the shared memory pools used by iceoryx for DDS EventBus communication
+#
+# Memory Pool Configuration:
+# - Each mempool defines a chunk size (including 64-byte header) and count
+# - Chunk size = payload size + 64 bytes (header overhead)
+# - Blocks must be aligned to 4 bytes
+#
+# For EventBus messages:
+# - Small events: typically < 1KB payload
+# - Medium events: typically 1KB - 16KB payload  
+# - Large events: typically 16KB - 64KB payload
+# - Maximum message size: 65500B (from DDS config)
+
+[general]
+version = 1
+
+[[segment]]
+
+# Small messages: < 1KB payload (chunk size = 1024 + 64 = 1088 bytes)
+# Suitable for: status updates, small events
+[[segment.mempool]]
+size = 1088        # 1024 bytes payload + 64 bytes header
+count = 10000      # 10000 chunks
+
+# Medium messages: 1KB - 4KB payload (chunk size = 4096 + 64 = 4160 bytes)
+# Suitable for: medium-sized events, JSON data
+[[segment.mempool]]
+size = 4160        # 4096 bytes payload + 64 bytes header
+count = 5000       # 5000 chunks
+
+# Large messages: 4KB - 16KB payload (chunk size = 16384 + 64 = 16448 bytes)
+# Suitable for: large events, complex data structures
+[[segment.mempool]]
+size = 16448       # 16384 bytes payload + 64 bytes header
+count = 1000       # 1000 chunks
+
+# Extra large messages: 16KB - 64KB payload (chunk size = 65536 + 64 = 65600 bytes)
+# Suitable for: very large events, bulk data
+[[segment.mempool]]
+size = 65600       # 65536 bytes payload + 64 bytes header
+count = 200        # 200 chunks
+
+# Maximum size: 64KB+ payload (chunk size = 131072 + 64 = 131136 bytes)
+# Suitable for: maximum DDS message size
+[[segment.mempool]]
+size = 131136      # 131072 bytes payload + 64 bytes header
+count = 50         # 50 chunks
+

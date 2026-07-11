@@ -1,0 +1,53 @@
+{
+    "logBuffer": 4096,
+    "config": {
+        "interval": 2000,
+        "configPath": "/uniubi_mock/data/config/",
+        "defConfigPath": "/uniubi_mock/product/mock/"
+    },
+    "netFramework": {
+        "threadCount": 2
+    },
+    "timerCtrl": {
+        "threadCount": 0
+    },
+    "fileCache": {
+        "count": 16,
+        "path": "/uniubi_mock/data/cache/"
+    },
+    "dds": {
+        "rpcServer": "robotServer",
+        "rpcService": [
+            {
+                "service": "motionService",
+                "server": "motionServer"
+            }
+        ],
+        "domain": [
+            {
+                "name": "motion",
+                "domain": 1,
+                "url": "/uniubi_mock/etc/dds/motion_config.xml"
+            }
+        ],
+        "client": [
+            {
+                "server": "motionServer",
+                "domain": "motion"
+            }
+        ],
+        "eventBus": [
+            {
+                "server": "motionServer",
+                "domain": "motion",
+                "topics": 32,
+                "withService": true,
+                "withClient": false,
+                "workers": {
+                    "count": 1,
+                    "task": 16
+                }
+            }
+        ]
+    }
+}
