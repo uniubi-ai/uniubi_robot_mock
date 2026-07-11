@@ -1,0 +1,13 @@
+{
+   "robotControl" : {
+      "action" : {
+         "enableCompanionAction" : false,
+         "enableTalkAction" : false
+      },
+      "mode" : "default",
+      "serverAction" : {
+         "enableAudioAgent" : false
+      }
+   }
+}
+

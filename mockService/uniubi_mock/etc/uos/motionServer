@@ -1,0 +1,91 @@
+{
+    "logBuffer": 4096,
+    "config": {
+        "configPath": "/uniubi_mock/data/config/",
+        "defConfigPath": "/uniubi_mock/product/mock/"
+    },
+    "setupMode": {
+        "motionControlRole": "cereControl",
+        "imu": false,
+        "gps": false,
+        "uwb": false,
+        "trc": false
+    },
+    "realtime": {
+        "enable": true
+    },
+    "timerCtrl": {
+        "threadCount": 0
+    },
+    "dds": {
+        "mainRPC": "motionServer",
+        "domain": [
+            {
+                "name": "motion",
+                "domain": 1,
+                "url": "/uniubi_mock/etc/dds/motion_config.xml"
+            }
+        ],
+        "server": [
+            {
+                "server": "motionServer",
+                "domain": "motion",
+                "workers": {
+                    "count": 1,
+                    "task": 16
+                }
+            }
+        ],
+        "eventBus": [
+            {
+                "server": "motionServer",
+                "domain": "motion",
+                "default": true,
+                "topics": 32,
+                "withService": true,
+                "withClient": true,
+                "workers": {
+                    "count": 2,
+                    "task": 16
+                }
+            }
+        ],
+        "client": [
+            {
+                "server": "motionServer",
+                "domain": "motion"
+            }
+        ]
+    },
+    "trc": {
+        "axes": {
+            "axesLX": 0,
+            "axesLY": 1,
+            "axesRX": 2,
+            "axesRY": 3,
+            "axesLT": 4,
+            "axesRT": 5
+        },
+        "buttons": {
+            "buttonBack": 0,
+            "buttonStart": 1,
+            "buttonLB": 2,
+            "buttonRB": 3,
+            "buttonF1": 4,
+            "buttonF2": 5,
+            "buttonA": 6,
+            "buttonB": 7,
+            "buttonX": 8,
+            "buttonY": 9,
+            "buttonUp": 10,
+            "buttonDown": 11,
+            "buttonLeft": 12,
+            "buttonRight": 13,
+            "buttonLS": 14,
+            "buttonRS": 15
+        }
+    },
+    "motion": {
+        "modelDir": "/uniubi_mock/product/model/motion/"
+    }
+}

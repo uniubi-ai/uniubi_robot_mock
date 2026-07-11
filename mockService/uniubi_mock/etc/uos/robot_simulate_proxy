@@ -1,0 +1,82 @@
+{
+    "domain": [
+        {
+            "name": "host",
+            "domain": 42,
+            "url": "/uniubi_mock/etc/dds/host_config.xml"
+        }
+    ],
+    "server": [
+        {
+            "server": "robotServer",
+            "domain": "host",
+            "workers": {
+                "count": 2,
+                "task": 16
+            }
+        },
+        {
+            "server": "cerebellumServer",
+            "domain": "host",
+            "workers": {
+                "count": 1,
+                "task": 16
+            }
+        }
+    ],
+    "eventBus": [
+        {
+            "server": "robotServer",
+            "domain": "host",
+            "topics": 32,
+            "withService": true,
+            "withClient": true,
+            "workers": {
+                "count": 1,
+                "task": 16
+            }
+        },
+        {
+            "server": "robotCereServer",
+            "domain": "host",
+            "topics": 32,
+            "withService": true,
+            "withClient": true,
+            "workers": {
+                "count": 1,
+                "task": 16
+            }
+        }
+    ],
+    "reader": {
+        "trc": {
+            "topic": "motion/trc",
+            "qos": {
+                "reliability": "BEST_EFFORT",
+                "durability": "VOLATILE",
+                "history": "KEEP_LAST",
+                "depth": 1
+            }
+        },
+        "observed": {
+            "topic": "motion/observed",
+            "qos": {
+                "reliability": "BEST_EFFORT",
+                "durability": "VOLATILE",
+                "history": "KEEP_LAST",
+                "depth": 1
+            }
+        }
+    },
+    "writer": {
+        "control": {
+            "topic": "motion/control",
+            "qos": {
+                "reliability": "BEST_EFFORT",
+                "durability": "VOLATILE",
+                "history": "KEEP_LAST",
+                "depth": 1
+            }
+        }
+    }
+}

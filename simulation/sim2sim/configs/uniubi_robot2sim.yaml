@@ -1,0 +1,37 @@
+# Uniubi robot2sim bridge 配置
+# 用法：
+#   python -m sim2sim.robot2simulator.run_bridge --config sim2sim/configs/uniubi_robot2sim.yaml --backend mujoco --viewer
+
+xml_path: "./sim2sim/assets/uni_0410/urdf/scene_terrain.xml"
+urdf_path: "./sim2sim/assets/uni_0410/urdf/uni_0417.urdf"
+
+initial_base_pos_xyz: [0.0, 0.0, 0.8]
+
+dof_names:
+  - FL_ABAD_JOINT
+  - FL_HIP_JOINT
+  - FL_KNEE_JOINT
+  - FR_ABAD_JOINT
+  - FR_HIP_JOINT
+  - FR_KNEE_JOINT
+  - RL_ABAD_JOINT
+  - RL_HIP_JOINT
+  - RL_KNEE_JOINT
+  - RR_ABAD_JOINT
+  - RR_HIP_JOINT
+  - RR_KNEE_JOINT
+
+settling_steps: 50
+
+control:
+  stiffness: [25.0, 25.0, 25.0, 25.0, 25.0, 25.0, 25.0, 25.0, 25.0, 25.0, 25.0, 25.0]
+  damping: [0.7, 0.7, 0.7, 0.7, 0.7, 0.7, 0.7, 0.7, 0.7, 0.7, 0.7, 0.7]
+
+simulation_dt: 0.005
+control_decimation: 4
+init_angles: [0.05, 0.3, -1.0, -0.05, 0.3, -1.0, 0.05, 0.3, -1.0, -0.05, 0.3, -1.0]
+torque_scale: [0.9, 1.1]
+torque_limits: [28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28]
+
+contact_monitor:
+  enabled: true

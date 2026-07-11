@@ -1,0 +1,40 @@
+{
+    "dependService": [
+        "motionService"
+    ],
+    "simulateProxy": {
+        "domain": "host",
+        "broadcast": 30000,
+        "leaseTimeout": 30000,
+        "interface": [
+            "enp1s0",
+            "eth0",
+            "wlan0"
+        ],
+        "rpcServer": "robotServer",
+        "motionAction": "motion_action",
+        "ddsConfig": "/uniubi_mock/etc/uos/robot_simulate_proxy"
+    },
+    "brainProxy": {
+        "domain": "host",
+        "rpcServer": "cerebellumServer",
+        "brainTRC": {
+            "topic": "brain/trc",
+            "qos": {
+                "reliability": "BEST_EFFORT",
+                "durability": "VOLATILE",
+                "history": "KEEP_LAST",
+                "depth": 1
+            }
+        },
+        "brainMotion": {
+            "topic": "brain/motionState",
+            "qos": {
+                "reliability": "BEST_EFFORT",
+                "durability": "VOLATILE",
+                "history": "KEEP_LAST",
+                "depth": 1
+            }
+        }
+    }
+}
