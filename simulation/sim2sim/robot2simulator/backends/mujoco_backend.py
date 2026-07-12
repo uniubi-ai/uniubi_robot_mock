@@ -32,6 +32,15 @@ class MujocoBackendConfig:
     # pd
     stiffness: Optional[np.ndarray] = None  # (n,)
     damping: Optional[np.ndarray] = None  # (n,)
+    torque_limits: Optional[np.ndarray] = None  # (n,)
+    armature: Optional[np.ndarray] = None  # (n,)
+    torque_curve_x1: Optional[np.ndarray] = None  # (n,)
+    torque_curve_x2: Optional[np.ndarray] = None  # (n,)
+    torque_curve_y1: Optional[np.ndarray] = None  # (n,)
+    torque_curve_y2: Optional[np.ndarray] = None  # (n,)
+    friction_static: Optional[np.ndarray] = None  # (n,)
+    friction_dynamic: Optional[np.ndarray] = None  # (n,)
+    activation_velocity: Optional[np.ndarray] = None  # (n,)
 
     # debug
     dump_actuators: bool = False
@@ -94,11 +103,24 @@ class MujocoBackend(SimBackend):
         self._joint_qpos = np.empty(len(self.actuator_names), dtype=np.float32)
         self._joint_qvel = np.empty(len(self.actuator_names), dtype=np.float32)
         self._joint_tau = np.empty(len(self.actuator_names), dtype=np.float32)
-        self._ctrl_buffer = np.zeros(self._model.nu, dtype=np.float32)
-        self._dense_actuator_layout = bool(
-            (self._model.nu == len(self.actuator_names))
-            and np.array_equal(self._actuator_ids, np.arange(len(self.actuator_names), dtype=np.int32))
-        )
+        n_act = len(self.actuator_names)
+        self._q_des = np.zeros(n_act, dtype=np.float32)
+        self._qd_des = np.zeros(n_act, dtype=np.float32)
+        self._kp = np.zeros(n_act, dtype=np.float32)
+        self._kd = np.zeros(n_act, dtype=np.float32)
+        self._tau_ff = np.zeros(n_act, dtype=np.float32)
+        self._tau_applied = np.zeros(n_act, dtype=np.float32)
+        self._qfrc_buffer = np.zeros(self._model.nv, dtype=np.float32)
+        self._tau_limits = self._resolve_torque_limits(cfg.torque_limits)
+        default_effort = self._tau_limits if self._tau_limits is not None else np.full(n_act, np.inf, dtype=np.float32)
+        self._armature = self._resolve_actuator_vector(cfg.armature, default=None)
+        self._tn_x1 = self._resolve_actuator_vector(cfg.torque_curve_x1, default=np.inf)
+        self._tn_x2 = self._resolve_actuator_vector(cfg.torque_curve_x2, default=np.inf)
+        self._tn_y1 = self._resolve_actuator_vector(cfg.torque_curve_y1, default=default_effort)
+        self._tn_y2 = self._resolve_actuator_vector(cfg.torque_curve_y2, default=self._tn_y1)
+        self._friction_static = self._resolve_actuator_vector(cfg.friction_static, default=0.0)
+        self._friction_dynamic = self._resolve_actuator_vector(cfg.friction_dynamic, default=0.0)
+        self._activation_vel = self._resolve_actuator_vector(cfg.activation_velocity, default=0.01)
 
         self._next_mj_debug_t = 0.0
         self._last_kp: Optional[np.ndarray] = None
@@ -121,10 +143,22 @@ class MujocoBackend(SimBackend):
     def reset(self) -> None:
         mujoco = self._mujoco
         mujoco.mj_resetData(self._model, self._data)
+        self._disable_builtin_actuator_servos()
+        self._apply_armature_if_present()
 
-        stiffness = np.asarray(self._cfg.stiffness if self._cfg.stiffness is not None else [], dtype=np.float32)
-        damping = np.asarray(self._cfg.damping if self._cfg.damping is not None else [], dtype=np.float32)
-        self._apply_pd_gains_if_present(stiffness=stiffness, damping=damping)
+        stiffness = np.asarray(
+            self._cfg.stiffness if self._cfg.stiffness is not None else np.zeros(len(self.actuator_names)),
+            dtype=np.float32,
+        )
+        damping = np.asarray(
+            self._cfg.damping if self._cfg.damping is not None else np.zeros(len(self.actuator_names)),
+            dtype=np.float32,
+        )
+        if stiffness.shape[0] != len(self.actuator_names):
+            raise RuntimeError(f"stiffness 维度不匹配：{stiffness.shape[0]} != {len(self.actuator_names)}")
+        if damping.shape[0] != len(self.actuator_names):
+            raise RuntimeError(f"damping 维度不匹配：{damping.shape[0]} != {len(self.actuator_names)}")
+        self.set_pd_gains(stiffness, damping)
 
         if self._cfg.dump_actuators:
             self._dump_actuators()
@@ -157,7 +191,11 @@ class MujocoBackend(SimBackend):
 
         self._set_initial_joint_positions(init_joint)
         self.set_position_target(init_joint)
+        self.set_velocity_target(np.zeros_like(init_joint))
+        self.set_feedforward_torque(np.zeros_like(init_joint))
         self._data.qvel[:] = 0.0
+        self._data.ctrl[:] = 0.0
+        self._data.qfrc_applied[:] = 0.0
 
         base_pos = self._cfg.initial_base_pos_xyz
         if base_pos is None:
@@ -169,7 +207,7 @@ class MujocoBackend(SimBackend):
         mujoco.mj_forward(self._model, self._data)
 
         for _ in range(int(self._cfg.settling_steps)):
-            self.set_position_target(init_joint)
+            self._apply_torque_control()
             mujoco.mj_step(self._model, self._data)
 
         self._next_mj_debug_t = 0.0
@@ -182,22 +220,26 @@ class MujocoBackend(SimBackend):
             if now >= self._next_mj_debug_t:
                 self._print_mj_debug()
                 self._next_mj_debug_t = now + 1.0 / max(float(self._cfg.mj_debug_hz), 1e-6)
+        self._apply_torque_control()
         self._mujoco.mj_step(self._model, self._data)
 
     def set_position_target(self, target_pos: np.ndarray) -> None:
         target_pos = np.asarray(target_pos, dtype=np.float32)
         if target_pos.shape[0] != len(self.actuator_names):
             raise RuntimeError(f"target_pos 维度不匹配：{target_pos.shape[0]} != {len(self.actuator_names)}")
-        if self._model.nu != len(self.actuator_names):
-            raise RuntimeError(f"actuator 数量不匹配：model.nu={self._model.nu}, actuator_names={len(self.actuator_names)}")
+        self._q_des[:] = target_pos
 
-        if self._dense_actuator_layout:
-            self._data.ctrl[:] = target_pos
-            return
+    def set_velocity_target(self, target_vel: np.ndarray) -> None:
+        target_vel = np.asarray(target_vel, dtype=np.float32)
+        if target_vel.shape[0] != len(self.actuator_names):
+            raise RuntimeError(f"target_vel 维度不匹配：{target_vel.shape[0]} != {len(self.actuator_names)}")
+        self._qd_des[:] = target_vel
 
-        self._ctrl_buffer.fill(0.0)
-        self._ctrl_buffer[self._actuator_ids] = target_pos
-        self._data.ctrl[:] = self._ctrl_buffer
+    def set_feedforward_torque(self, tau_ff: np.ndarray) -> None:
+        tau_ff = np.asarray(tau_ff, dtype=np.float32)
+        if tau_ff.shape[0] != len(self.actuator_names):
+            raise RuntimeError(f"tau_ff 维度不匹配：{tau_ff.shape[0]} != {len(self.actuator_names)}")
+        self._tau_ff[:] = tau_ff
 
     def set_pd_gains(self, kp: np.ndarray, kd: np.ndarray) -> None:
         kp = np.asarray(kp, dtype=np.float32)
@@ -222,7 +264,7 @@ class MujocoBackend(SimBackend):
         )
 
     def get_joint_state(self) -> JointState:
-        return read_12dof_joint_state(
+        state = read_12dof_joint_state(
             self._model,
             self._data,
             self.actuator_names,
@@ -233,6 +275,8 @@ class MujocoBackend(SimBackend):
             out_qvel=self._joint_qvel,
             out_tau=self._joint_tau,
         )
+        np.copyto(self._joint_tau, self._tau_applied, casting="unsafe")
+        return state
 
     def viewer_context(self, enabled: bool) -> ContextManager[Optional[Any]]:
         if (not enabled) or self.headless:
@@ -243,9 +287,6 @@ class MujocoBackend(SimBackend):
         return bool(viewer.is_running())
 
     def viewer_sync(self, viewer: Any) -> None:
-        # 新增画面焦点跟随
-        if self._data.qpos.shape[0] >= 3:
-            viewer.cam.lookat[:] = self._data.qpos[:3]
         viewer.sync()
 
     def set_fault_visual(self, joint_index: Optional[int], active: bool) -> None:
@@ -316,49 +357,113 @@ class MujocoBackend(SimBackend):
     def _set_initial_joint_positions(self, motor_pos: np.ndarray) -> None:
         self._data.qpos[self._qpos_adrs] = motor_pos
 
-    def _apply_pd_gains_if_present(self, stiffness: np.ndarray, damping: np.ndarray) -> None:
-        # 对 position actuator：kp 在 actuator_gainprm[:,0]；偏置常见为 -kp 写在 actuator_biasprm[:,1]
-        if stiffness.size > 0 and hasattr(self._model, "actuator_gainprm"):
-            n = min(int(stiffness.shape[0]), len(self._actuator_ids))
-            if n > 0:
-                actuator_ids = self._actuator_ids[:n]
-                self._model.actuator_gainprm[actuator_ids, 0] = stiffness[:n]
-                if hasattr(self._model, "actuator_biasprm") and self._model.actuator_biasprm.shape[0] >= n:
-                    self._model.actuator_biasprm[actuator_ids, 1] = -stiffness[:n]
+    def _resolve_torque_limits(self, cfg_limits: Optional[np.ndarray]) -> Optional[np.ndarray]:
+        if cfg_limits is not None:
+            limits = np.asarray(cfg_limits, dtype=np.float32)
+            if limits.shape[0] != len(self.actuator_names):
+                raise RuntimeError(f"torque_limits 维度不匹配：{limits.shape[0]} != {len(self.actuator_names)}")
+            return np.abs(limits)
 
-        if damping.size > 0 and hasattr(self._model, "dof_damping"):
-            n = min(int(damping.shape[0]), len(self._dof_adrs))
-            if n > 0:
-                self._model.dof_damping[self._dof_adrs[:n]] = damping[:n]
+        if not hasattr(self._model, "actuator_forcerange"):
+            return None
+        force_range = np.asarray(self._model.actuator_forcerange[self._actuator_ids], dtype=np.float32)
+        if force_range.shape != (len(self.actuator_names), 2):
+            return None
+        limits = np.minimum(np.abs(force_range[:, 0]), np.abs(force_range[:, 1]))
+        if not np.all(np.isfinite(limits)) or np.any(limits <= 0.0):
+            return None
+        return limits
+
+    def _resolve_actuator_vector(
+        self, value: Optional[np.ndarray], *, default: float | np.ndarray | None
+    ) -> Optional[np.ndarray]:
+        if value is None:
+            if default is None:
+                return None
+            value_arr = np.asarray(default, dtype=np.float32)
+        else:
+            value_arr = np.asarray(value, dtype=np.float32)
+
+        if value_arr.ndim == 0 or value_arr.size == 1:
+            return np.full(len(self.actuator_names), float(value_arr.reshape(-1)[0]), dtype=np.float32)
+        value_arr = value_arr.reshape(-1).astype(np.float32)
+        if value_arr.shape[0] != len(self.actuator_names):
+            raise RuntimeError(
+                f"actuator parameter 维度不匹配：{value_arr.shape[0]} != {len(self.actuator_names)}"
+            )
+        return value_arr.copy()
+
+    def _apply_armature_if_present(self) -> None:
+        if self._armature is None:
+            return
+        if hasattr(self._model, "dof_armature"):
+            self._model.dof_armature[self._dof_adrs] = self._armature
+
+    def _disable_builtin_actuator_servos(self) -> None:
+        if hasattr(self._model, "actuator_gainprm"):
+            self._model.actuator_gainprm[self._actuator_ids, :] = 0.0
+        if hasattr(self._model, "actuator_biasprm"):
+            self._model.actuator_biasprm[self._actuator_ids, :] = 0.0
+        if self._data.ctrl.size > 0:
+            self._data.ctrl[:] = 0.0
 
     def _apply_received_pd_gains(self, kp: np.ndarray, kd: np.ndarray) -> None:
-        mujoco = self._mujoco
         if kp.shape[0] != len(self.actuator_names) or kd.shape[0] != len(self.actuator_names):
             raise RuntimeError(
                 f"kp/kd 维度不匹配：kp={kp.shape[0]}, kd={kd.shape[0]} vs actuator_names={len(self.actuator_names)}"
             )
+        self._kp[:] = kp
+        self._kd[:] = kd
 
-        # kp：position actuator 的刚度（主要通过 gainprm[:,0] 与 biasprm[:,1] 生效）
-        if hasattr(self._model, "actuator_gainprm"):
-            self._model.actuator_gainprm[self._actuator_ids, 0] = kp
-            if hasattr(self._model, "actuator_biasprm") and int(self._model.actuator_biasprm.shape[1]) >= 2:
-                self._model.actuator_biasprm[self._actuator_ids, 1] = -kp
-
-        # kd：不同模型/版本映射不同，优先写 actuator_gainprm[:,1]，否则回退到 dof_damping
-        can_write_kd_to_actuator = False
-        try:
-            can_write_kd_to_actuator = bool(
-                hasattr(self._model, "actuator_gainprm") and int(self._model.actuator_gainprm.shape[1]) >= 2
-            )
-        except Exception:
-            can_write_kd_to_actuator = False
-
-        if can_write_kd_to_actuator:
-            self._model.actuator_gainprm[self._actuator_ids, 1] = kd
+    def _apply_torque_control(self) -> None:
+        q = np.asarray(self._data.qpos[self._qpos_adrs], dtype=np.float32)
+        qd = np.asarray(self._data.qvel[self._dof_adrs], dtype=np.float32)
+        if (
+            (not np.all(np.isfinite(q)))
+            or (not np.all(np.isfinite(qd)))
+            or (not np.all(np.isfinite(self._q_des)))
+            or (not np.all(np.isfinite(self._qd_des)))
+            or (not np.all(np.isfinite(self._kp)))
+            or (not np.all(np.isfinite(self._kd)))
+            or (not np.all(np.isfinite(self._tau_ff)))
+        ):
+            self._tau_applied.fill(0.0)
+            self._data.qfrc_applied[:] = 0.0
             return
 
-        if hasattr(self._model, "dof_damping"):
-            self._model.dof_damping[self._dof_adrs] = kd
+        tau = self._kp * (self._q_des - q) + self._kd * (self._qd_des - qd) + self._tau_ff
+        tau -= self._friction_static * np.tanh(qd / self._activation_vel) + self._friction_dynamic * qd
+        tau = self._clip_effort_by_tn_curve(tau, qd)
+        if not np.all(np.isfinite(tau)):
+            self._tau_applied.fill(0.0)
+            self._data.qfrc_applied[:] = 0.0
+            return
+
+        self._tau_applied[:] = tau
+        self._qfrc_buffer.fill(0.0)
+        self._qfrc_buffer[self._dof_adrs] = tau
+        self._data.qfrc_applied[:] = self._qfrc_buffer
+        if self._data.ctrl.size > 0:
+            self._data.ctrl[:] = 0.0
+
+    def _clip_effort_by_tn_curve(self, effort: np.ndarray, joint_vel: np.ndarray) -> np.ndarray:
+        same_direction = (joint_vel * effort) > 0.0
+        max_effort = np.where(same_direction, self._tn_y1, self._tn_y2).astype(np.float32)
+
+        x1 = self._tn_x1
+        x2 = self._tn_x2
+        valid_curve = np.isfinite(x1) & np.isfinite(x2) & (x2 > x1)
+        motoring_over_x1 = same_direction & valid_curve & (np.abs(joint_vel) >= x1)
+        curve_limit = np.zeros_like(max_effort)
+        curve_limit[valid_curve] = (
+            -max_effort[valid_curve] / (x2[valid_curve] - x1[valid_curve])
+        ) * (np.abs(joint_vel[valid_curve]) - x1[valid_curve]) + max_effort[valid_curve]
+        curve_limit = np.clip(curve_limit, 0.0, None)
+        max_effort = np.where(motoring_over_x1, curve_limit, max_effort)
+
+        if self._tau_limits is not None:
+            max_effort = np.minimum(max_effort, self._tau_limits)
+        return np.clip(effort, -max_effort, max_effort)
 
     def _dump_actuators(self) -> None:
         mujoco = self._mujoco
@@ -373,7 +478,10 @@ class MujocoBackend(SimBackend):
         print(
             f"[MuJoCo] nu={int(self._model.nu)} nq={int(self._model.nq)} nv={int(self._model.nv)} "
             f"gravity={None if gravity is None else np.array2string(np.asarray(gravity), precision=3)} "
-            f"disableflags={disableflags} gravity_disabled={gravity_disabled}"
+            f"disableflags={disableflags} gravity_disabled={gravity_disabled} torque_control=True "
+            f"tau_limits={None if self._tau_limits is None else np.array2string(self._tau_limits, precision=2)} "
+            f"tn_x1={np.array2string(self._tn_x1[:3], precision=2)} "
+            f"tn_x2={np.array2string(self._tn_x2[:3], precision=2)}"
         )
         for aid in range(int(self._model.nu)):
             name = mujoco.mj_id2name(self._model, mujoco.mjtObj.mjOBJ_ACTUATOR, aid)
@@ -383,17 +491,15 @@ class MujocoBackend(SimBackend):
             kp = float(self._model.actuator_gainprm[aid, 0]) if hasattr(self._model, "actuator_gainprm") else float("nan")
             fr0 = float(self._model.actuator_forcerange[aid, 0]) if hasattr(self._model, "actuator_forcerange") else float("nan")
             fr1 = float(self._model.actuator_forcerange[aid, 1]) if hasattr(self._model, "actuator_forcerange") else float("nan")
-            print(f"[MuJoCo] actuator[{aid}] name={name} joint={joint_name} kp={kp:.3f} forcerange=({fr0:.1f},{fr1:.1f})")
+            print(
+                f"[MuJoCo] actuator[{aid}] name={name} joint={joint_name} "
+                f"builtin_kp={kp:.3f} forcerange=({fr0:.1f},{fr1:.1f})"
+            )
 
     def _print_mj_debug(self) -> None:
-        mujoco = self._mujoco
         act_names = self.actuator_names
-        ctrl_named = np.zeros(len(act_names), dtype=np.float32)
         qpos_named = np.zeros(len(act_names), dtype=np.float32)
-        force_named = np.zeros(len(act_names), dtype=np.float32)
-        for i, (name, aid, qpos_adr) in enumerate(zip(act_names, self._actuator_ids, self._qpos_adrs)):
-            ctrl_named[i] = float(self._data.ctrl[aid])
-            force_named[i] = float(self._data.actuator_force[aid])
+        for i, (name, qpos_adr) in enumerate(zip(act_names, self._qpos_adrs)):
             qpos_named[i] = float(self._data.qpos[qpos_adr])
 
         base_pos = np.asarray(self._data.qpos[:3], dtype=np.float32) if self._data.qpos.shape[0] >= 3 else None
@@ -403,9 +509,9 @@ class MujocoBackend(SimBackend):
             f"t={float(self._data.time):.3f} "
             f"base_pos={None if base_pos is None else np.array2string(base_pos, precision=3)} "
             f"base_vel={None if base_vel is None else np.array2string(base_vel, precision=3)} "
-            f"ctrl[:3]={np.array2string(ctrl_named[:3], precision=3)} "
+            f"q_des[:3]={np.array2string(self._q_des[:3], precision=3)} "
             f"qpos[:3]={np.array2string(qpos_named[:3], precision=3)} "
-            f"force[:3]={np.array2string(force_named[:3], precision=3)} "
-            f"|ctrl-qpos|_inf={float(np.max(np.abs(ctrl_named - qpos_named))):.4f} "
-            f"|force|_inf={float(np.max(np.abs(force_named))):.4f}"
+            f"tau[:3]={np.array2string(self._tau_applied[:3], precision=3)} "
+            f"|q_des-qpos|_inf={float(np.max(np.abs(self._q_des - qpos_named))):.4f} "
+            f"|tau|_inf={float(np.max(np.abs(self._tau_applied))):.4f}"
         )

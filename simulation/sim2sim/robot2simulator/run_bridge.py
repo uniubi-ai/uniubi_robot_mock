@@ -20,6 +20,13 @@ def _load_yaml(path: str) -> Dict[str, Any]:
     return {} if raw is None else raw
 
 
+def _resolve_path(path: str, *, config_dir: Path) -> str:
+    expanded = Path(path).expanduser()
+    if expanded.is_absolute():
+        return str(expanded)
+    return str((config_dir / expanded).resolve())
+
+
 def _get_sim_dt(raw: Dict[str, Any]) -> float:
     return float(raw.get("simulation_dt", 0.005))
 
@@ -88,10 +95,16 @@ def _make_transport(dds: DdsConfig, *, actuator_names: tuple[str, ...], dds_debu
     return CycloneDdsTransport(cfg, motor_headers=headers)
 
 
-def _make_backend_mujoco(raw: Dict[str, Any], *, args: argparse.Namespace, actuator_names: tuple[str, ...]):
+def _make_backend_mujoco(
+    raw: Dict[str, Any],
+    *,
+    args: argparse.Namespace,
+    actuator_names: tuple[str, ...],
+    config_dir: Path,
+):
     from sim2sim.robot2simulator.backends.mujoco_backend import MujocoBackend, MujocoBackendConfig
 
-    xml_path = raw["xml_path"]
+    xml_path = _resolve_path(str(raw["xml_path"]), config_dir=config_dir)
     sim_dt = _get_sim_dt(raw)
     publish_hz = _get_publish_hz(raw, sim_dt=sim_dt)
     control_hz = _get_control_hz(raw, sim_dt=sim_dt)
@@ -99,6 +112,14 @@ def _make_backend_mujoco(raw: Dict[str, Any], *, args: argparse.Namespace, actua
     control_cfg = raw.get("control", {}) or {}
     stiffness = np.asarray(control_cfg.get("stiffness", []), dtype=np.float32)
     damping = np.asarray(control_cfg.get("damping", []), dtype=np.float32)
+    torque_limits_arr = np.asarray(raw.get("torque_limits", []), dtype=np.float32)
+    torque_limits = None if torque_limits_arr.size == 0 else torque_limits_arr
+    actuator_model_cfg = raw.get("actuator_model", {}) or {}
+
+    def _optional_actuator_param(name: str):
+        if name not in actuator_model_cfg:
+            return None
+        return np.asarray(actuator_model_cfg[name], dtype=np.float32)
 
     init_joint_pos = raw.get("initial_joint_pos", None)
     if init_joint_pos is None:
@@ -123,6 +144,15 @@ def _make_backend_mujoco(raw: Dict[str, Any], *, args: argparse.Namespace, actua
         settling_steps=settling_steps,
         stiffness=stiffness,
         damping=damping,
+        torque_limits=torque_limits,
+        armature=_optional_actuator_param("armature"),
+        torque_curve_x1=_optional_actuator_param("x1"),
+        torque_curve_x2=_optional_actuator_param("x2"),
+        torque_curve_y1=_optional_actuator_param("y1"),
+        torque_curve_y2=_optional_actuator_param("y2"),
+        friction_static=_optional_actuator_param("friction_static"),
+        friction_dynamic=_optional_actuator_param("friction_dynamic"),
+        activation_velocity=_optional_actuator_param("activation_velocity"),
         dump_actuators=bool(args.dump_actuators),
         mj_debug=bool(args.mj_debug),
         mj_debug_hz=float(args.mj_debug_hz),
@@ -130,10 +160,16 @@ def _make_backend_mujoco(raw: Dict[str, Any], *, args: argparse.Namespace, actua
     return MujocoBackend(cfg)
 
 
-def _make_backend_isaacgym(raw: Dict[str, Any], *, args: argparse.Namespace, actuator_names: tuple[str, ...]):
+def _make_backend_isaacgym(
+    raw: Dict[str, Any],
+    *,
+    args: argparse.Namespace,
+    actuator_names: tuple[str, ...],
+    config_dir: Path,
+):
     from sim2sim.robot2simulator.backends.isaacgym_backend import IsaacGymBackend, IsaacGymBackendConfig
 
-    urdf_path = raw["urdf_path"]
+    urdf_path = _resolve_path(str(raw["urdf_path"]), config_dir=config_dir)
     sim_dt = _get_sim_dt(raw)
     publish_hz = _get_publish_hz(raw, sim_dt=sim_dt)
     control_hz = _get_control_hz(raw, sim_dt=sim_dt)
@@ -190,7 +226,7 @@ def _make_backend_isaacgym(raw: Dict[str, Any], *, args: argparse.Namespace, act
 
 def main() -> int:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--config", required=True, help="yaml 路径，参考 sim2sim/configs/zhishen.yaml")
+    parser.add_argument("--config", required=True, help="yaml path, for example sim2sim/configs/uniubi_cyvet.yaml")
     parser.add_argument("--backend", choices=("auto", "mujoco", "isaacgym"), default="auto")
     parser.add_argument("--viewer", action="store_true", help="打开仿真器 viewer（若后端支持）")
     parser.add_argument("--headless", action="store_true", help="强制 headless")
@@ -243,7 +279,8 @@ def main() -> int:
     parser.add_argument("--dump-actuators", action="store_true", help="启动时打印执行器参数（kp/forcerange/映射关节）")
     args = parser.parse_args()
 
-    raw = _load_yaml(args.config)
+    config_path = Path(args.config).expanduser().resolve()
+    raw = _load_yaml(str(config_path))
 
     dds = DdsConfig()
     print(f"DDS Config: {dds}")
@@ -252,11 +289,11 @@ def main() -> int:
     actuator_names = tuple(raw.get("actuator_names", DEFAULT_ACTUATOR_NAMES))
 
     if backend_name == "mujoco":
-        backend = _make_backend_mujoco(raw, args=args, actuator_names=actuator_names)
+        backend = _make_backend_mujoco(raw, args=args, actuator_names=actuator_names, config_dir=config_path.parent)
         publish_hz = float(getattr(backend, "publish_hz"))
         control_hz = float(getattr(backend, "control_hz"))
     elif backend_name == "isaacgym":
-        backend = _make_backend_isaacgym(raw, args=args, actuator_names=actuator_names)
+        backend = _make_backend_isaacgym(raw, args=args, actuator_names=actuator_names, config_dir=config_path.parent)
         publish_hz = float(getattr(backend, "publish_hz"))
         control_hz = float(getattr(backend, "control_hz"))
     else:

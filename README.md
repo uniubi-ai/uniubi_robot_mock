@@ -8,6 +8,7 @@ RobotService mock runtime and simulator bridge for SDK integration development w
 |---|---|---|
 | Mock runtime | `mockService/uniubi_mock/` | Self-contained x86_64 runtime package deployed to `/uniubi_mock` in a Linux VM |
 | Simulator bridge | `simulation/sim2sim/` | MuJoCo / Isaac Gym bridge that exchanges motion control and robot state with the mock runtime |
+| SDK Sim2Sim | `docs/sim2sim_sdk.md` | Low-level SDK client validation through MuJoCo and DDS topics |
 | DDS helper | `simulation/scripts/setup_dds.sh` | Bind Cyclone DDS to a selected network interface for the current shell |
 | Runtime guide | `docs/mock_service.md` | Deploy, start, validate, and troubleshoot the mock service |
 | Simulator guide | `docs/simulation_setup.md` | Prepare MuJoCo / Isaac Gym environments and run the bridge |
@@ -20,7 +21,7 @@ RobotService mock runtime and simulator bridge for SDK integration development w
 4. Start the simulator bridge from `simulation/` with `PYTHONPATH=$(pwd)`.
 5. Connect SDK clients to the mock service and run high-level actions such as `standing`, `walking`, or `laying`.
 
-See [docs/mock_service.md](docs/mock_service.md) and [docs/simulation_setup.md](docs/simulation_setup.md) for the full commands.
+See [docs/mock_service.md](docs/mock_service.md), [docs/simulation_setup.md](docs/simulation_setup.md), and [docs/sim2sim_sdk.md](docs/sim2sim_sdk.md) for the full commands.
 
 ## Supported Actions
 
