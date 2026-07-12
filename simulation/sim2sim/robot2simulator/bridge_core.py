@@ -681,10 +681,11 @@ class BridgeCore:
                 incoming_vel[joint_index] = 0.0
         self._backend.set_velocity_target(incoming_vel)
 
-        # incoming_tau_ff = np.asarray(self._last_ctrl.tau_ff, dtype=np.float32)
-        # if incoming_tau_ff.shape[0] != n:
-        #     incoming_tau_ff = incoming_tau_ff[:n]
-        # self._backend.set_feedforward_torque(incoming_tau_ff)
+        incoming_tau_ff = _coerce_ctrl_vec("tau_ff", ctrl.tau_ff, n, fill=0.0)
+        for joint_index in active_faults.keys():
+            if 0 <= joint_index < n:
+                incoming_tau_ff[joint_index] = 0.0
+        self._backend.set_feedforward_torque(incoming_tau_ff)
 
         self._backend.set_position_target(incoming)
 
