@@ -14,27 +14,24 @@ RobotService mock runtime and simulator bridge for SDK integration development w
 | Runtime guide | [docs/mock_service.md](docs/mock_service.md) | Deploy, start, validate, and troubleshoot the mock service |
 | Simulator guide | [docs/simulation_setup.md](docs/simulation_setup.md) | Prepare MuJoCo and run the bridge |
 
-## SDK Workflows
+## Installation
 
-| Interface | Entry point | Use it to validate |
-|---|---|---|
-| HighLevel | [simulation/scripts/highlevel_console.py](simulation/scripts/highlevel_console.py) | Configured action scheduling and action parameters |
-| LowLevel | [simulation/scripts/run_lowlevel_onnx_policy.py](simulation/scripts/run_lowlevel_onnx_policy.py) | Direct observations, ONNX inference, and joint PD targets |
+1. **Mock services (HighLevel only):** deploy
+   [mockService/uniubi_mock/](mockService/uniubi_mock/) by following the
+   [runtime guide](docs/mock_service.md). LowLevel skips this step.
+2. **Shared environment:** install the MuJoCo simulation dependencies, public
+   Python SDK, and matching SDK native libraries by following the
+   [SDK Sim2Sim guide](docs/sim2sim_sdk.md#install).
 
-See the [SDK Sim2Sim guide](docs/sim2sim_sdk.md) for separate HighLevel and
-LowLevel procedures.
+## HighLevel
 
-## Minimum Loop
+HighLevel requires the mock services and MuJoCo bridge. Use
+[highlevel_console.py](simulation/scripts/highlevel_console.py) to validate
+configured action scheduling and action parameters. See
+[HighLevel SDK Validation](docs/sim2sim_sdk.md#highlevel-sdk-validation) for the
+startup and test procedure.
 
-1. Deploy [mockService/uniubi_mock/](mockService/uniubi_mock/) to `/uniubi_mock` on an x86_64 Linux host.
-2. Start `robotMonitorServer`, `motionServer`, and `robotServer` in order with `sudo` and `LD_LIBRARY_PATH=/uniubi_mock/vendor/usr/lib`.
-3. Configure the host DDS network interface in `/uniubi_mock/etc/dds/host_config.xml` if the host interface is not one of the defaults.
-4. Start the simulator bridge from `simulation/` with `PYTHONPATH=$(pwd)`.
-5. Connect SDK clients to the mock service and validate HighLevel actions or the interactive LowLevel policy loop.
-
-See the linked guides above for the full commands.
-
-## Supported Actions
+### Supported Actions
 
 Current mock runtime supports:
 
@@ -54,6 +51,15 @@ supported action reports a fall. It is not exposed as a user-startable action.
 Biped stand actions are persistent. To return to Walking from the HighLevel
 console, call `stop`, confirm that `state` reports `walking`, and then send
 Walking velocity parameters.
+
+## LowLevel
+
+LowLevel does not require the mock services. On x86_64 Linux it communicates
+directly with the MuJoCo bridge over DDS. Use
+[run_lowlevel_onnx_policy.py](simulation/scripts/run_lowlevel_onnx_policy.py) to
+validate observations, bundled ONNX inference, and 12-joint PD targets. See
+[LowLevel SDK Validation](docs/sim2sim_sdk.md#lowlevel-sdk-validation) for the
+startup and test procedure.
 
 ## Compatibility Notes
 
