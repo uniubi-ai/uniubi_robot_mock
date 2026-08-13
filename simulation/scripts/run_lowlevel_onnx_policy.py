@@ -30,9 +30,19 @@ CROUCH_POS_LEG_MAJOR = np.asarray(
     ],
     dtype=np.float32,
 )
+POSTURE_KP_LEG_MAJOR = np.asarray(
+    [90.0, 90.0, 90.0, 90.0, 90.0, 90.0, 130.0, 130.0, 140.0, 130.0, 130.0, 140.0],
+    dtype=np.float32,
+)
+POSTURE_KD_LEG_MAJOR = np.asarray(
+    [1.5, 1.5, 1.5, 1.5, 1.5, 1.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5],
+    dtype=np.float32,
+)
 LEG_MAJOR_TO_PER_JOINT = np.asarray([0, 3, 6, 9, 1, 4, 7, 10, 2, 5, 8, 11], dtype=np.int64)
 PER_JOINT_TO_LEG_MAJOR = np.asarray([0, 4, 8, 1, 5, 9, 2, 6, 10, 3, 7, 11], dtype=np.int64)
 DEFAULT_POS_PER_JOINT = DEFAULT_POS_LEG_MAJOR[LEG_MAJOR_TO_PER_JOINT]
+POLICY_PATH = Path(__file__).resolve().parents[1] / "models" / "policy.onnx"
+CONTROL_RATE_HZ = 50.0
 
 
 def _quat_rotate_inverse_wxyz(q: np.ndarray, v: np.ndarray) -> np.ndarray:
@@ -88,6 +98,8 @@ def _command_from_trc(obs, fallback: np.ndarray) -> np.ndarray:
 
 
 def _make_action(sdk, layout, target_leg: np.ndarray, kp: float, kd: float):
+    kp_values = np.broadcast_to(np.asarray(kp, dtype=np.float32), (12,))
+    kd_values = np.broadcast_to(np.asarray(kd, dtype=np.float32), (12,))
     action = sdk.MotorCtrlAction()
     motors = []
     for i, mi in enumerate(layout.motors[:12]):
@@ -96,8 +108,8 @@ def _make_action(sdk, layout, target_leg: np.ndarray, kp: float, kd: float):
         m.joint_no = mi.joint_no
         m.position = float(target_leg[i])
         m.velocity = 0.0
-        m.kp_gain = float(kp)
-        m.kd_gain = float(kd)
+        m.kp_gain = float(kp_values[i])
+        m.kd_gain = float(kd_values[i])
         m.torque = 0.0
         motors.append(m)
     action.motor_num = len(motors)
@@ -163,233 +175,269 @@ def _wait_lowlevel_state(client, target, timeout_s: float, state_event: threadin
     return True
 
 
+class PolicyControlLoop:
+    def __init__(self, client, sdk, layout, session, rate_hz: float) -> None:
+        self.client = client
+        self.sdk = sdk
+        self.layout = layout
+        self.session = session
+        self.input_name = session.get_inputs()[0].name
+        self.output_name = session.get_outputs()[0].name
+        self.period = 1.0 / max(rate_hz, 1.0)
+        self.lock = threading.Lock()
+        self.mode = "idle"
+        self.command = np.zeros(3, dtype=np.float32)
+        self.hold_pose = DEFAULT_POS_LEG_MAJOR.copy()
+        self.hold_kp = POSTURE_KP_LEG_MAJOR.copy()
+        self.hold_kd = POSTURE_KD_LEG_MAJOR.copy()
+        self.last_action = np.zeros(12, dtype=np.float32)
+        self.running = True
+        self.sent = 0
+        self.failed = 0
+        self.thread = threading.Thread(target=self._run, name="onnx-policy-control", daemon=True)
+        self.thread.start()
+
+    def pause(self) -> None:
+        with self.lock:
+            self.mode = "idle"
+        time.sleep(self.period * 2.0)
+
+    def hold(self, pose: np.ndarray, kp=POSTURE_KP_LEG_MAJOR, kd=POSTURE_KD_LEG_MAJOR) -> None:
+        with self.lock:
+            self.hold_pose = pose.astype(np.float32).copy()
+            self.hold_kp = np.broadcast_to(np.asarray(kp, dtype=np.float32), (12,)).copy()
+            self.hold_kd = np.broadcast_to(np.asarray(kd, dtype=np.float32), (12,)).copy()
+            self.mode = "stand"
+
+    def walk(self, command: np.ndarray) -> None:
+        with self.lock:
+            self.command = command.astype(np.float32).copy()
+            self.last_action.fill(0.0)
+            self.mode = "walk"
+
+    def state(self) -> tuple[str, np.ndarray, int, int]:
+        with self.lock:
+            return self.mode, self.command.copy(), self.sent, self.failed
+
+    def close(self) -> None:
+        self.running = False
+        self.thread.join(timeout=2.0)
+
+    def _run(self) -> None:
+        next_cycle = time.monotonic()
+        while self.running:
+            with self.lock:
+                mode = self.mode
+                command = self.command.copy()
+                hold_pose = self.hold_pose.copy()
+                hold_kp = self.hold_kp.copy()
+                hold_kd = self.hold_kd.copy()
+                last_action = self.last_action.copy()
+
+            ok = None
+            if mode == "stand":
+                ok = self.client.send_control(_make_action(self.sdk, self.layout, hold_pose, hold_kp, hold_kd))
+            elif mode == "walk":
+                obs = self.client.get_latest_observation(timeout_ms=10)
+                if obs is not None:
+                    policy_obs = _build_policy_obs(obs, command, last_action)
+                    action_model = self.session.run([self.output_name], {self.input_name: policy_obs})[0]
+                    action_model = np.clip(action_model.reshape(12), -100.0, 100.0).astype(np.float32)
+                    target_model = DEFAULT_POS_PER_JOINT + 0.25 * action_model
+                    target_leg = target_model[PER_JOINT_TO_LEG_MAJOR]
+                    ok = self.client.send_control(_make_action(self.sdk, self.layout, target_leg, 35.0, 1.0))
+                    with self.lock:
+                        self.last_action = action_model
+
+            if ok is not None:
+                with self.lock:
+                    if ok:
+                        self.sent += 1
+                    else:
+                        self.failed += 1
+            next_cycle += self.period
+            delay = next_cycle - time.monotonic()
+            if delay > 0:
+                time.sleep(delay)
+            else:
+                next_cycle = time.monotonic()
+
+
+def _print_help() -> None:
+    print(
+        """commands:
+  stand                 smoothly stand up from the current measured pose
+  walk [VX VY YAW]      stand first if needed, then run policy.onnx; defaults to 0.5 0 0
+  stop                  stop the policy and return to the standing target
+  lay                   smoothly return to the laying pose
+  obs                   print the latest observation
+  state                 print client and control-loop state
+  help                  show this help
+  quit                  stop sending, disable LowLevel control, and exit
+"""
+    )
+
+
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Run a 45-dim ONNX walking policy through MotionLowLevelClient.")
-    parser.add_argument("--model", required=True)
+    parser = argparse.ArgumentParser(description="Interactive LowLevel demo for the bundled policy.onnx.")
     parser.add_argument(
         "--sdk-python",
         default=os.getenv("ROBOTSDK_PYTHON_PATH", ""),
-        help="Path containing the robot_motion_sdk Python package. Can also be set by ROBOTSDK_PYTHON_PATH.",
+        help="Path containing the robot_motion_sdk Python package.",
     )
-    parser.add_argument("--duration", type=float, default=10.0)
-    parser.add_argument("--rate", type=float, default=50.0)
-    parser.add_argument("--domain", type=int, default=42)
-    parser.add_argument("--control-topic", default="rt/motion/control")
-    parser.add_argument("--observed-topic", default="rt/motion/observed")
-    parser.add_argument("--trc-topic", default="rt/motion/trc")
-    parser.add_argument("--cmd-x", type=float, default=0.3)
-    parser.add_argument("--cmd-y", type=float, default=0.0)
-    parser.add_argument("--cmd-yaw", type=float, default=0.0)
-    parser.add_argument("--kp", type=float, default=35.0)
-    parser.add_argument("--kd", type=float, default=1.0)
-    parser.add_argument(
-        "--warmup-duration",
-        type=float,
-        default=2.0,
-        help="Seconds to keep sending standing target after crouch and stand-up before running ONNX.",
-    )
-    parser.add_argument("--crouch-duration", type=float, default=2.0)
-    parser.add_argument("--standup-duration", type=float, default=2.0)
-    parser.add_argument("--warmup-kp", type=float, default=80.0)
-    parser.add_argument("--warmup-kd", type=float, default=1.0)
-    parser.add_argument("--connect-timeout", type=float, default=5.0)
-    parser.add_argument("--prepare-timeout", type=float, default=20.0)
     args = parser.parse_args()
 
     if not args.sdk_python:
         print("missing --sdk-python or ROBOTSDK_PYTHON_PATH", flush=True)
         return 2
     sdk_python = Path(args.sdk_python).expanduser().resolve()
-    if not (sdk_python / "robot_motion_sdk" / "__init__.py").is_file():
-        print(f"invalid sdk python path: {sdk_python}", flush=True)
-        print("expected: <path>/robot_motion_sdk/__init__.py", flush=True)
-        return 2
-
-    os.environ["UNIUBI_MOTION_LOWLEVEL_BACKEND"] = "simulation"
-    os.environ["UNIUBI_MOTION_DDS_DOMAIN"] = str(args.domain)
-    os.environ["UNIUBI_MOTION_CONTROL_TOPIC"] = args.control_topic
-    os.environ["UNIUBI_MOTION_OBSERVED_TOPIC"] = args.observed_topic
-    os.environ["UNIUBI_MOTION_TRC_TOPIC"] = args.trc_topic
-
     sys.path.insert(0, str(sdk_python))
     import robot_motion_sdk as sdk
+    import onnxruntime as ort
 
-    fallback_command = np.asarray([args.cmd_x, args.cmd_y, args.cmd_yaw], dtype=np.float32)
+    os.environ["UNIUBI_MOTION_DDS_DOMAIN"] = "42"
+    os.environ["UNIUBI_MOTION_CONTROL_TOPIC"] = "rt/motion/control"
+    os.environ["UNIUBI_MOTION_OBSERVED_TOPIC"] = "rt/motion/observed"
+    os.environ["UNIUBI_MOTION_TRC_TOPIC"] = "rt/motion/trc"
 
-    if not sdk.service.initial(None, "onnxPolicy"):
+    session = ort.InferenceSession(str(POLICY_PATH), providers=["CPUExecutionProvider"])
+    if session.get_inputs()[0].shape != [1, 45] or session.get_outputs()[0].shape != [1, 12]:
+        print("unsupported policy.onnx shape; expected input [1,45] and output [1,12]", flush=True)
+        return 2
+    if not sdk.service.initial(None, "onnxPolicyCli"):
         print("sdk.service.initial failed", flush=True)
         return 1
+
     client = sdk.MotionLowLevelClient()
     state_event = threading.Event()
 
     @client.on_connect
     def _on_connect(state, err):
-        if err != sdk.LowLevelError.kNone:
-            print(f"lowlevel state={state} err={err}", flush=True)
+        print(f"[callback] state={state} error={err}", flush=True)
         state_event.set()
 
-    def _cleanup() -> None:
-        try:
-            if client.get_state() in (sdk.LowLevelState.kConnected, sdk.LowLevelState.kPrepared):
-                client.set_motion_enable(False)
-        except Exception:
-            pass
-        try:
-            client.disconnect()
-        finally:
-            sdk.service.shutdown()
-
+    loop = None
     try:
         if not client.connect(observed_hz=500, lease_ms=60000):
-            print(f"connect request rejected: {client.get_last_error()}", flush=True)
-            _cleanup()
+            print(f"connect rejected: {client.get_last_error()}", flush=True)
             return 1
-        if not _wait_lowlevel_state(client, sdk.LowLevelState.kConnected, args.connect_timeout, state_event):
-            print(
-                f"wait connected timeout state={client.get_state()} last_error={client.get_last_error()}",
-                flush=True,
-            )
-            _cleanup()
-            return 1
-
-        if not client.set_motion_enable(True):
-            print(f"set_motion_enable request rejected: {client.get_last_error()}", flush=True)
-            _cleanup()
-            return 1
-        if not _wait_lowlevel_state(client, sdk.LowLevelState.kPrepared, args.prepare_timeout, state_event):
-            print(
-                f"wait prepared timeout state={client.get_state()} last_error={client.get_last_error()}",
-                flush=True,
-            )
-            _cleanup()
+        if not _wait_lowlevel_state(client, sdk.LowLevelState.kConnected, 5.0, state_event):
+            print(f"connect timeout: {client.get_last_error()}", flush=True)
             return 1
         layout = client.get_motor_layout()
-        if layout is None or int(getattr(layout, "motor_num", 0)) <= 0:
-            print(f"get_motor_layout failed: {client.get_last_error()}", flush=True)
-            _cleanup()
+        if layout is None or layout.motor_num != 12:
+            print(f"invalid motor layout: {client.get_last_error()}", flush=True)
             return 1
-    except Exception:
-        _cleanup()
-        raise
 
-    session_state = {}
+        loop = PolicyControlLoop(client, sdk, layout, session, CONTROL_RATE_HZ)
+        posture = "laying"
 
-    def _load_onnx_session() -> None:
-        try:
-            import onnxruntime as ort
+        def ensure_prepared() -> None:
+            if client.get_state() == sdk.LowLevelState.kConnected:
+                if not client.set_motion_enable(True):
+                    raise RuntimeError(f"enable rejected: {client.get_last_error()}")
+                if not _wait_lowlevel_state(client, sdk.LowLevelState.kPrepared, 10.0, state_event):
+                    raise RuntimeError(f"enable timeout: {client.get_last_error()}")
+            if client.get_state() != sdk.LowLevelState.kPrepared:
+                raise RuntimeError(f"LowLevel control is not prepared: {client.get_state()}")
 
-            session = ort.InferenceSession(str(Path(args.model)), providers=["CPUExecutionProvider"])
-            session_state["session"] = session
-            session_state["input_name"] = session.get_inputs()[0].name
-            session_state["output_name"] = session.get_outputs()[0].name
-        except Exception as exc:
-            session_state["error"] = exc
+        def transition_to_stand(name: str = "stand") -> None:
+            nonlocal posture
+            ensure_prepared()
+            loop.pause()
+            start = _latest_joint_pos_leg_major(client, 500, CROUCH_POS_LEG_MAJOR)
+            _run_pose_transition(
+                client, sdk, layout, start, DEFAULT_POS_LEG_MAJOR, 2.0, CONTROL_RATE_HZ,
+                POSTURE_KP_LEG_MAJOR, POSTURE_KD_LEG_MAJOR, name,
+            )
+            loop.hold(DEFAULT_POS_LEG_MAJOR)
+            posture = "standing"
 
-    loader = threading.Thread(target=_load_onnx_session, daemon=True)
-    loader.start()
+        print(f"[PASS] connected; model={POLICY_PATH}; robot starts in laying pose", flush=True)
+        _print_help()
 
-    warmup_count = 0
-    current_pose = _latest_joint_pos_leg_major(client, timeout_ms=100, fallback=DEFAULT_POS_LEG_MAJOR)
-    print(
-        "startup warmup: current -> crouch -> standing -> policy",
-        flush=True,
-    )
-    current_pose, sent_count = _run_pose_transition(
-        client,
-        sdk,
-        layout,
-        current_pose,
-        CROUCH_POS_LEG_MAJOR,
-        args.crouch_duration,
-        args.rate,
-        args.warmup_kp,
-        args.warmup_kd,
-        "crouch",
-    )
-    warmup_count += sent_count
-    current_pose = _latest_joint_pos_leg_major(client, timeout_ms=20, fallback=current_pose)
-    current_pose, sent_count = _run_pose_transition(
-        client,
-        sdk,
-        layout,
-        current_pose,
-        DEFAULT_POS_LEG_MAJOR,
-        args.standup_duration,
-        args.rate,
-        args.warmup_kp,
-        args.warmup_kd,
-        "standup",
-    )
-    warmup_count += sent_count
-
-    warmup_period = 1.0 / max(args.rate, 1.0)
-    next_warmup_t = time.monotonic()
-    standing_deadline = time.monotonic() + max(args.warmup_duration, 0.0)
-    standing_action = _make_action(sdk, layout, DEFAULT_POS_LEG_MAJOR, args.warmup_kp, args.warmup_kd)
-    while time.monotonic() < standing_deadline or loader.is_alive():
-        client.send_control(standing_action)
-        warmup_count += 1
-        next_warmup_t += warmup_period
-        sleep_s = next_warmup_t - time.monotonic()
-        if sleep_s > 0:
-            time.sleep(sleep_s)
-    loader.join()
-    if "error" in session_state:
-        print(f"load ONNX failed: {session_state['error']}", flush=True)
-        _cleanup()
-        return 1
-    session = session_state["session"]
-    input_name = session_state["input_name"]
-    output_name = session_state["output_name"]
-    if warmup_count:
-        print(
-            f"warmup sent count={warmup_count} crouch={args.crouch_duration}s "
-            f"standup={args.standup_duration}s standing_hold={args.warmup_duration}s "
-            f"kp={args.warmup_kp} kd={args.warmup_kd}",
-            flush=True,
-        )
-
-    last_action_model = np.zeros(12, dtype=np.float32)
-    deadline = time.monotonic() + max(args.duration, 0.0)
-    period = 1.0 / max(args.rate, 1.0)
-    next_t = time.monotonic()
-    obs_count = 0
-    print(
-        f"ONNX policy running model={args.model} obs_topic={args.observed_topic} "
-        f"ctrl_topic={args.control_topic} trc_topic={args.trc_topic}",
-        flush=True,
-    )
-    try:
-        while time.monotonic() < deadline:
-            obs = client.get_latest_observation(timeout_ms=100)
-            if obs is None:
+        while True:
+            try:
+                line = input("lowlevel> ").strip()
+            except (EOFError, KeyboardInterrupt):
+                break
+            if not line:
                 continue
-            command = _command_from_trc(obs, fallback_command)
-            policy_obs = _build_policy_obs(obs, command, last_action_model)
-            action_model = session.run([output_name], {input_name: policy_obs})[0].reshape(12).astype(np.float32)
-            action_model = np.clip(action_model, -100.0, 100.0)
-            target_model = DEFAULT_POS_PER_JOINT + 0.25 * action_model
-            target_leg = target_model[PER_JOINT_TO_LEG_MAJOR]
-            action = _make_action(sdk, layout, target_leg, args.kp, args.kd)
-            ok = client.send_control(action)
-            obs_count += 1
-            if obs_count == 1 or obs_count % int(max(args.rate, 1.0)) == 0:
-                print(
-                    f"step={obs_count} send={ok} cmd={np.round(command, 3).tolist()} "
-                    f"act[:3]={np.round(action_model[:3], 3).tolist()} "
-                    f"target_leg[:3]={np.round(target_leg[:3], 3).tolist()} "
-                    f"trc_valid={getattr(obs.trc, 'valid', 0)}",
-                    flush=True,
-                )
-            last_action_model = action_model
-            next_t += period
-            sleep_s = next_t - time.monotonic()
-            if sleep_s > 0:
-                time.sleep(sleep_s)
+            command_name, _, raw_args = line.partition(" ")
+            command_name = command_name.lower()
+            raw_args = raw_args.strip()
+            try:
+                if command_name in ("quit", "exit"):
+                    break
+                if command_name == "help":
+                    _print_help()
+                elif command_name == "stand":
+                    transition_to_stand()
+                    print("[PASS] standing", flush=True)
+                elif command_name == "walk":
+                    values = [float(value) for value in raw_args.split()] if raw_args else [0.5, 0.0, 0.0]
+                    if len(values) != 3:
+                        raise ValueError("usage: walk [VX VY YAW]")
+                    if posture not in ("standing", "walking"):
+                        print(f"[INFO] current posture={posture}; standing before walk", flush=True)
+                        transition_to_stand("walk prepare")
+                    else:
+                        ensure_prepared()
+                    loop.walk(np.asarray(values, dtype=np.float32))
+                    posture = "walking"
+                    print(f"[PASS] policy running command={values}", flush=True)
+                elif command_name == "stop":
+                    if client.get_state() != sdk.LowLevelState.kPrepared:
+                        raise RuntimeError("LowLevel control is not enabled")
+                    loop.pause()
+                    start = _latest_joint_pos_leg_major(client, 500, DEFAULT_POS_LEG_MAJOR)
+                    _run_pose_transition(
+                        client, sdk, layout, start, DEFAULT_POS_LEG_MAJOR, 1.0, CONTROL_RATE_HZ,
+                        POSTURE_KP_LEG_MAJOR, POSTURE_KD_LEG_MAJOR, "stop"
+                    )
+                    loop.hold(DEFAULT_POS_LEG_MAJOR)
+                    posture = "standing"
+                    print("[PASS] policy stopped; standing", flush=True)
+                elif command_name == "lay":
+                    if client.get_state() != sdk.LowLevelState.kPrepared:
+                        raise RuntimeError("run stand before lay")
+                    loop.pause()
+                    start = _latest_joint_pos_leg_major(client, 500, DEFAULT_POS_LEG_MAJOR)
+                    _run_pose_transition(
+                        client, sdk, layout, start, CROUCH_POS_LEG_MAJOR, 2.0, CONTROL_RATE_HZ,
+                        POSTURE_KP_LEG_MAJOR, POSTURE_KD_LEG_MAJOR, "lay"
+                    )
+                    loop.hold(CROUCH_POS_LEG_MAJOR)
+                    posture = "laying"
+                    print("[PASS] laying", flush=True)
+                elif command_name == "obs":
+                    obs = client.get_latest_observation(timeout_ms=500)
+                    if obs is None:
+                        print("[WAIT] no observation", flush=True)
+                    else:
+                        q = [round(m.position, 3) for m in obs.motors[:12]]
+                        print(f"motors={obs.motor_num} q={q}", flush=True)
+                elif command_name == "state":
+                    mode, command, sent, failed = loop.state()
+                    print(
+                        f"client={client.get_state()} error={client.get_last_error()} "
+                        f"posture={posture} mode={mode} command={command.tolist()} sent={sent} failed={failed}",
+                        flush=True,
+                    )
+                else:
+                    print(f"unknown command: {command_name!r}; type help", flush=True)
+            except (RuntimeError, ValueError) as exc:
+                print(f"[ERROR] {exc}", flush=True)
+        return 0
     finally:
-        _cleanup()
-    print(f"done obs_count={obs_count}", flush=True)
-    return 0 if obs_count > 0 else 2
+        if loop is not None:
+            loop.pause()
+            loop.close()
+        if client.get_state() == sdk.LowLevelState.kPrepared:
+            client.emergency_stop()
+            client.set_motion_enable(False)
+        client.disconnect()
+        sdk.service.shutdown()
 
 
 if __name__ == "__main__":

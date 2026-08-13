@@ -4,17 +4,21 @@
 
 xml_path: "../assets/cyvet/xml/scene_terrain.xml"
 
-initial_base_pos_xyz: [0.0, 0.0, 0.8]
+# Place the folded feet just above the floor.  A higher spawn point makes the
+# robot fall into contact and rebound before the LowLevel client is enabled.
+initial_base_pos_xyz: [0.0, 0.0, 0.06]
+initial_joint_pos: [0.48, 1.10, -2.72, -0.48, 1.10, -2.72, 0.48, 1.10, -2.72, -0.48, 1.10, -2.72]
 
 settling_steps: 50
 
 control:
-  stiffness: [35.0, 35.0, 35.0, 35.0, 35.0, 35.0, 35.0, 35.0, 35.0, 35.0, 35.0, 35.0]
-  damping: [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
+  # Match the validated laying/standing posture controller until a LowLevel
+  # command supplies its own gains.
+  stiffness: [90.0, 90.0, 90.0, 90.0, 90.0, 90.0, 130.0, 130.0, 140.0, 130.0, 130.0, 140.0]
+  damping: [1.5, 1.5, 1.5, 1.5, 1.5, 1.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5]
 
 simulation_dt: 0.004
 control_decimation: 5
-init_angles: [0.05, 0.3, -1.0, -0.05, 0.3, -1.0, 0.05, 0.3, -1.0, -0.05, 0.3, -1.0]
 torque_scale: [0.9, 1.1]
 torque_limits: [48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48]
 

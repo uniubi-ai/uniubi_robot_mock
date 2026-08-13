@@ -60,18 +60,33 @@ Bridge 会发布 `rt/motion/observed`，并订阅 `rt/motion/control`。
 ```bash
 cd /path/to/uniubi_robot_mock/simulation
 export PYTHONPATH=$(pwd)
+export LD_LIBRARY_PATH=/uniubi_mock/vendor/usr/lib:$LD_LIBRARY_PATH
 
 python scripts/run_lowlevel_onnx_policy.py \
-  --sdk-python "$ROBOTSDK_PYTHON_PATH" \
-  --model /path/to/policy.onnx \
-  --duration 30 \
-  --rate 50 \
-  --cmd-x 0.5
+  --sdk-python "$ROBOTSDK_PYTHON_PATH"
 ```
 
-这个 helper 会构造 Cyvet 速度策略使用的 45 维 observation，并通过 `MotionLowLevelClient` 发送关节位置 target。
+机器人以趴下姿态出生；没有 LowLevel 指令时会持续保持趴姿。CLI 固定运行仓库内置的
+`simulation/models/policy.onnx`，典型操作顺序如下：
 
-板端部署建议使用 TensorRT engine 进行策略推理。上面的 ONNXRuntime helper 主要用于 x86 仿真验证和 SDK 接口联调。
+```text
+stand
+walk 0.5 0 0
+state
+stop
+lay
+quit
+```
+
+`stand` 从实测趴下姿态平滑站立；`walk` 以 50 Hz 运行固定的 45 维输入策略。如果
+当前不是站立姿态，`walk` 会自动先执行同一套 2 秒站立过渡，再启动策略。`stop`
+停止策略推理并回到站立；`lay` 平滑回到趴下姿态。`state` 会显示 SDK 状态、当前
+姿态、速度指令及控制帧成功/失败计数，`obs` 会打印最新的 12 个关节位置。
+
+趴下和站立过渡使用与 mock MotionServer 配置一致的分关节位控增益。`quit` 会执行
+LowLevel 安全清理、退出控制并断开客户端。
+
+这个 ONNXRuntime CLI 仅用于 x86 仿真和 LowLevel SDK 接口联调。
 
 ## 可选：绑定 DDS 网卡
 
@@ -124,7 +139,7 @@ set {"lineVelocityX":-1.0,"lineVelocityY":0,"velocity":0}
 ```
 
 不要把 `start walking` 的 RPC 成功响应当作持续动作已经退出。输入 `help` 可查看
-完整命令。LowLevel ONNX 测试仍使用 `--cmd-x/--cmd-y/--cmd-yaw`，不受影响。
+完整命令。
 
 ## 常见问题
 

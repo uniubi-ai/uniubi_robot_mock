@@ -50,6 +50,7 @@ docker/artifacts/
 *.tmp
 
 *.onnx
+!models/policy.onnx
 
 # Doc Outputs
 **/docs/_build/*
