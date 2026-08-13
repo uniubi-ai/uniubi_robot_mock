@@ -283,15 +283,13 @@ def main() -> int:
     parser.add_argument(
         "--sdk-python",
         default=os.getenv("ROBOTSDK_PYTHON_PATH", ""),
-        help="Path containing the robot_motion_sdk Python package.",
+        help="Optional source path containing robot_motion_sdk; an installed package is used by default.",
     )
     args = parser.parse_args()
 
-    if not args.sdk_python:
-        print("missing --sdk-python or ROBOTSDK_PYTHON_PATH", flush=True)
-        return 2
-    sdk_python = Path(args.sdk_python).expanduser().resolve()
-    sys.path.insert(0, str(sdk_python))
+    if args.sdk_python:
+        sdk_python = Path(args.sdk_python).expanduser().resolve()
+        sys.path.insert(0, str(sdk_python))
     import robot_motion_sdk as sdk
     import onnxruntime as ort
 

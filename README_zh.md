@@ -14,26 +14,21 @@
 | mock 服务说明 | [docs/mock_service.md](docs/mock_service.md) | 部署、启动、校验和排障 |
 | 仿真环境说明 | [docs/simulation_setup.md](docs/simulation_setup.md) | MuJoCo 环境准备和 bridge 启动 |
 
-## SDK 验证入口
+## 安装
 
-| 接口 | 入口 | 验证内容 |
-|---|---|---|
-| HighLevel | [simulation/scripts/highlevel_console.py](simulation/scripts/highlevel_console.py) | 已配置动作的调度和动作参数 |
-| LowLevel | [simulation/scripts/run_lowlevel_onnx_policy.py](simulation/scripts/run_lowlevel_onnx_policy.py) | 直接观测、ONNX 推理和关节 PD 目标 |
+1. **mock 服务（仅 HighLevel）：**按照 [mock 服务说明](docs/mock_service.md)部署
+   [mockService/uniubi_mock/](mockService/uniubi_mock/)。LowLevel 跳过这一步。
+2. **公共环境：**按照 [SDK Sim2Sim 指南](docs/sim2sim_sdk_zh.md#安装)安装 MuJoCo
+   仿真依赖、公开 Python SDK 和同版本 SDK 动态库。
 
-HighLevel 和 LowLevel 的独立操作流程见 [SDK Sim2Sim 指南](docs/sim2sim_sdk_zh.md)。
+## HighLevel
 
-## 最小闭环
+HighLevel 需要 mock 服务和 MuJoCo bridge。使用
+[highlevel_console.py](simulation/scripts/highlevel_console.py)验证已配置动作的调度和
+动作参数。启动及测试步骤见
+[HighLevel SDK 验证](docs/sim2sim_sdk_zh.md#highlevel-sdk-验证)。
 
-1. 将 [mockService/uniubi_mock/](mockService/uniubi_mock/) 部署到 x86_64 Linux 主机的 `/uniubi_mock`。
-2. 使用 `sudo` 和 `LD_LIBRARY_PATH=/uniubi_mock/vendor/usr/lib` 依次启动 `robotMonitorServer`、`motionServer`、`robotServer`。
-3. 如果主机网卡不在默认列表中，修改 `/uniubi_mock/etc/dds/host_config.xml` 的 host DDS 网卡。
-4. 在 `simulation/` 下设置 `PYTHONPATH=$(pwd)` 并启动仿真 bridge。
-5. 使用 SDK 客户端连接 mock 服务，验证 HighLevel 动作或交互式 LowLevel 策略闭环。
-
-完整命令见上方链接的各项指南。
-
-## 支持动作
+### 支持动作
 
 当前 mock runtime 支持：
 
@@ -51,6 +46,14 @@ HighLevel 和 LowLevel 的独立操作流程见 [SDK Sim2Sim 指南](docs/sim2si
 
 双足站类动作是持续动作。通过 HighLevel console 返回 Walking 时，应先执行 `stop`，
 并用 `state` 确认当前动作已经是 `walking`，再下发 Walking 速度参数。
+
+## LowLevel
+
+LowLevel 不需要 mock 服务。在 x86_64 Linux 上，它通过 DDS 直接与 MuJoCo bridge
+通信。使用
+[run_lowlevel_onnx_policy.py](simulation/scripts/run_lowlevel_onnx_policy.py)验证直接
+观测、内置 ONNX 推理和 12 关节 PD 目标。启动及测试步骤见
+[LowLevel SDK 验证](docs/sim2sim_sdk_zh.md#lowlevel-sdk-验证)。
 
 ## 兼容性说明
 

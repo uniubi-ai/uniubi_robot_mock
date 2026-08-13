@@ -2,41 +2,63 @@
 
 **English** | [简体中文](sim2sim_sdk_zh.md)
 
-This guide covers two independent SDK validation paths against the same
-RobotService mock runtime and MuJoCo bridge:
+The repository provides two independent validation paths:
 
-| Interface | Entry point | Control level |
-|---|---|---|
-| HighLevel | [`simulation/scripts/highlevel_console.py`](../simulation/scripts/highlevel_console.py) | Start and stop configured motion actions and update action parameters |
-| LowLevel | [`simulation/scripts/run_lowlevel_onnx_policy.py`](../simulation/scripts/run_lowlevel_onnx_policy.py) | Run the bundled ONNX policy and send 12-joint PD targets |
+| Interface | Mock services | MuJoCo bridge | Entry point |
+|---|---|---|---|
+| LowLevel | Not required | Required | [`simulation/scripts/run_lowlevel_onnx_policy.py`](../simulation/scripts/run_lowlevel_onnx_policy.py) |
+| HighLevel | Required | Required | [`simulation/scripts/highlevel_console.py`](../simulation/scripts/highlevel_console.py) |
 
-The x86_64 Linux host running the mock runtime represents the robot body. The
-SDK client may run on that host or on another DDS-reachable Linux host. The
-commands below use the same host, which is the validated setup.
+On x86_64 Linux, the LowLevel SDK selects its external-simulation backend. It
+exchanges control and observation directly with the MuJoCo bridge over DDS, so
+it does not use `robotMonitorServer`, `motionServer`, or `robotServer`.
+HighLevel uses configured RobotService actions and therefore requires the mock
+runtime and all three services.
 
-## Shared Setup
+## Install
 
-### 1. Start the mock services
+### 1. Mock services (HighLevel only)
 
-Deploy and start `robotMonitorServer`, `motionServer`, and `robotServer` by
-following [Mock Service Development Guide](mock_service.md). The services must
-run with `sudo` because MotionServer creates a real-time control thread.
+HighLevel requires the RobotService mock runtime. Deploy
+`mockService/uniubi_mock/` to `/uniubi_mock` by following the
+[Mock Service Development Guide](mock_service.md).
 
-### 2. Install the simulation dependencies
+**Skip this step for LowLevel.** The x86 LowLevel SDK communicates directly
+with the MuJoCo bridge and does not use any mock service process.
+
+### 2. Shared simulation environment and SDK libraries
+
+Both interfaces require the repository, simulation dependencies, and public
+Python SDK. The following layout keeps the three repositories side by side:
 
 ```bash
-python -m pip install -r simulation/requirements.txt
+cd ~
+git clone https://github.com/uniubi-ai/uniubi_robot_mock.git
+git clone https://github.com/uniubi-ai/uniubi_robot_sdk.git
+git clone https://github.com/uniubi-ai/uniubi_robot_sdk_py.git
+
+python3 -m pip install -r ~/uniubi_robot_mock/simulation/requirements.txt
+
+export UNIUBI_SDK_ROOT=~/uniubi_robot_sdk
+cd ~/uniubi_robot_sdk_py
+env UNIUBI_SDK_ROOT="$UNIUBI_SDK_ROOT" python3 -m pip install .
 ```
 
-Set the directory containing the public Python SDK package:
+Before running either CLI, expose the matching SDK native libraries:
 
 ```bash
-export ROBOTSDK_PYTHON_PATH=/path/to/robotsdk/Sdk/Python
+export UNIUBI_SDK_ROOT=~/uniubi_robot_sdk
+export LD_LIBRARY_PATH="$UNIUBI_SDK_ROOT/lib/$(uname -m):${LD_LIBRARY_PATH}"
 ```
 
-### 3. Start the MuJoCo bridge
+After this common installation, LowLevel can be started immediately. HighLevel
+also requires the mock service installation from step 1.
 
-In terminal 1:
+## LowLevel SDK Validation
+
+### 1. Start the MuJoCo bridge
+
+Terminal 1:
 
 ```bash
 cd /path/to/uniubi_robot_mock/simulation
@@ -47,87 +69,26 @@ python -m sim2sim.robot2simulator.run_bridge \
   --viewer
 ```
 
-Use `--headless` instead of `--viewer` on a machine without a display. The
-bridge publishes `rt/motion/observed` and subscribes to `rt/motion/control`.
-The robot starts in a stable laying pose and receives no SDK control until a
-client enables or starts motion.
+Use `--headless` instead of `--viewer` without a display. The robot starts and
+remains in a stable laying pose before any LowLevel command arrives.
 
-### Optional: bind the DDS interface
+### 2. Start the LowLevel CLI
 
-When the host has multiple network interfaces:
-
-```bash
-cd /path/to/uniubi_robot_mock/simulation
-source scripts/setup_dds.sh <iface>
-```
-
-Use `ip -br addr` to find the interface that carries DDS traffic.
-
-## HighLevel SDK Validation
-
-Use HighLevel when testing configured actions such as `walking`, `waveHand`, or
-the biped-stand actions. It exercises action scheduling and action parameters;
-it does not send joint targets directly.
-
-In terminal 2:
-
-```bash
-cd /path/to/uniubi_robot_mock/simulation
-export PYTHONPATH=$(pwd):$ROBOTSDK_PYTHON_PATH
-
-python scripts/highlevel_console.py --iface <iface>
-```
-
-The console does not emulate remote-control button combinations. A typical
-Walking session is:
-
-```text
-start walking
-set {"lineVelocityX":0.5,"lineVelocityY":0,"velocity":0}
-state
-zero
-stop
-quit
-```
-
-- `set` keeps the parameters active.
-- `send 3 {...}` applies parameters for three seconds and then clears them.
-- `zero` clears action parameters without stopping the current action.
-- `start` reports that the request was accepted; use `state` to confirm the
-  action that is actually executing.
-
-`bipedStand`, `handstand`, `leftSideStand`, and `rightSideStand` are persistent
-actions. Return from them with `stop`, wait until `state` reports `walking`, and
-then send Walking parameters:
-
-```text
-start bipedStand
-stop
-state
-set {"lineVelocityX":0.5,"lineVelocityY":0,"velocity":0}
-```
-
-Use `help` for the complete HighLevel command list.
-
-## LowLevel SDK Validation
-
-Use LowLevel when testing the direct observation-to-joint-control loop. This
-example supports only the bundled
-[`simulation/models/policy.onnx`](../simulation/models/policy.onnx): a 45-input,
-12-output Cyvet velocity policy running at 50 Hz.
-
-In terminal 2:
+Terminal 2:
 
 ```bash
 cd /path/to/uniubi_robot_mock/simulation
 export PYTHONPATH=$(pwd)
-export LD_LIBRARY_PATH=/uniubi_mock/vendor/usr/lib:$LD_LIBRARY_PATH
 
-python scripts/run_lowlevel_onnx_policy.py \
-  --sdk-python "$ROBOTSDK_PYTHON_PATH"
+python scripts/run_lowlevel_onnx_policy.py
 ```
 
-The client connects without sending joint commands. A typical session is:
+When developing the Python binding directly from source instead of installing
+it, pass `--sdk-python /path/containing/robot_motion_sdk`.
+
+The CLI uses only the bundled
+[`simulation/models/policy.onnx`](../simulation/models/policy.onnx): a 45-input,
+12-output Cyvet velocity policy running at 50 Hz.
 
 ```text
 stand
@@ -148,26 +109,89 @@ quit
 | `obs` | Show the latest 12 observed joint positions |
 | `quit` | Send safety cleanup, disable LowLevel control, disconnect, and exit |
 
-If `walk` is entered while the tracked posture is not standing, the CLI first
-performs the same two-second standing transition and starts the policy only
-afterward. Laying and standing use the same per-joint posture gains as the mock
-MotionServer configuration.
+If `walk` is entered from a posture other than standing, the CLI first performs
+the two-second standing transition. Laying and standing use the same per-joint
+posture gains as the mock MotionServer configuration.
 
-This ONNXRuntime CLI is intended for x86 simulation and LowLevel SDK integration
-checks, not on-board policy deployment.
+The LowLevel data path is:
+
+```text
+MotionLowLevelClient (external simulation backend)
+  -> rt/motion/control
+  -> MuJoCo bridge
+  -> rt/motion/observed
+  -> MotionLowLevelClient
+```
+
+## HighLevel SDK Validation
+
+### 1. Start the mock services
+
+After completing mock service installation step 1, start `robotMonitorServer`,
+`motionServer`, and `robotServer` by following the
+[Mock Service Development Guide](mock_service.md). The services must run with
+`sudo` because MotionServer creates a real-time control thread.
+
+### 2. Start the MuJoCo bridge
+
+Start the same bridge shown in the LowLevel section. Do not start a second
+bridge if one is already running.
+
+### 3. Start the HighLevel CLI
+
+Terminal 2:
+
+```bash
+cd /path/to/uniubi_robot_mock/simulation
+export PYTHONPATH=$(pwd):$ROBOTSDK_PYTHON_PATH
+
+python scripts/highlevel_console.py --iface <iface>
+```
+
+A typical Walking session is:
+
+```text
+start walking
+set {"lineVelocityX":0.5,"lineVelocityY":0,"velocity":0}
+state
+zero
+stop
+quit
+```
+
+- `set` keeps the parameters active.
+- `send 3 {...}` applies parameters for three seconds and then clears them.
+- `zero` clears parameters without stopping the current action.
+- `start` means the request was accepted; use `state` to confirm the action
+  that is actually executing.
+
+`bipedStand`, `handstand`, `leftSideStand`, and `rightSideStand` are persistent
+actions. Return from them with `stop`, wait until `state` reports `walking`, and
+then send Walking parameters. Use `help` for the complete command list.
+
+## DDS Interface Selection
+
+When the host has multiple network interfaces:
+
+```bash
+cd /path/to/uniubi_robot_mock/simulation
+source scripts/setup_dds.sh <iface>
+```
+
+Use `ip -br addr` to identify the interface carrying DDS traffic. HighLevel
+also requires the same interface in the mock runtime host DDS configuration;
+see [Mock Service Development Guide](mock_service.md#host-dds-网卡配置).
 
 ## Troubleshooting
 
-If `robot_motion_sdk` cannot be imported, verify that
-`ROBOTSDK_PYTHON_PATH` points to the directory containing
-`robot_motion_sdk/__init__.py`.
+- If `robot_motion_sdk` cannot be imported, verify that
+  `ROBOTSDK_PYTHON_PATH` contains `robot_motion_sdk/__init__.py`.
+- If LowLevel receives no observation, verify that the MuJoCo bridge and client
+  use DDS domain `42` and matching `rt/motion/control` and
+  `rt/motion/observed` topics. Mock services are not part of this path.
+- If HighLevel RPC connects but motion does not run, verify that all three mock
+  services were started with `sudo` and became ready before starting the
+  HighLevel client.
 
-If DDS endpoints do not match, keep these defaults on both sides:
-
-- control: `rt/motion/control`
-- observed: `rt/motion/observed`
-- TRC: `rt/motion/trc`
-
-If RPC connects but motion does not run, confirm that all three mock services
-were started with `sudo` and are ready before starting the MuJoCo bridge and SDK
-client.
+The ONNXRuntime CLI is intended for x86 simulation and SDK integration checks,
+not on-board policy deployment.
