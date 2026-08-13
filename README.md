@@ -2,17 +2,10 @@
 
 **English** | [简体中文](README_zh.md)
 
-RobotService mock runtime and simulator bridge for SDK integration development without real hardware.
-
-## What Is Included
-
-| Area | Path | Purpose |
-|---|---|---|
-| Mock runtime | [mockService/uniubi_mock/](mockService/uniubi_mock/) | Self-contained runtime package deployed to `/uniubi_mock` on an x86_64 Linux host |
-| Simulator bridge | [simulation/sim2sim/](simulation/sim2sim/) | MuJoCo bridge that exchanges motion control and robot state with the mock runtime |
-| DDS helper | [simulation/scripts/setup_dds.sh](simulation/scripts/setup_dds.sh) | Bind Cyclone DDS to a selected network interface for the current shell |
-| Runtime guide | [docs/mock_service.md](docs/mock_service.md) | Deploy, start, validate, and troubleshoot the mock service |
-| Simulator guide | [docs/simulation_setup.md](docs/simulation_setup.md) | Prepare MuJoCo and run the bridge |
+This repository enables SDK-based HighLevel and LowLevel motion development
+and validation in a simulated environment without a physical robot. The
+simulation uses the same SDK interfaces as real hardware, so validated client
+code can be migrated to a robot with minimal changes.
 
 ## Installation
 

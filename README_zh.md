@@ -2,17 +2,9 @@
 
 [English](README.md) | **简体中文**
 
-用于在没有真机的情况下进行 SDK 集成开发的 RobotService mock 运行包和仿真 bridge。
-
-## 当前包含内容
-
-| 内容 | 路径 | 说明 |
-|---|---|---|
-| mock 运行包 | [mockService/uniubi_mock/](mockService/uniubi_mock/) | 部署到 x86_64 Linux 主机 `/uniubi_mock` 的自包含运行环境 |
-| 仿真 bridge | [simulation/sim2sim/](simulation/sim2sim/) | MuJoCo 后端，与 mock runtime 交换运控控制和机器人状态 |
-| DDS 网卡脚本 | [simulation/scripts/setup_dds.sh](simulation/scripts/setup_dds.sh) | 为当前 shell 绑定 Cyclone DDS 网卡 |
-| mock 服务说明 | [docs/mock_service.md](docs/mock_service.md) | 部署、启动、校验和排障 |
-| 仿真环境说明 | [docs/simulation_setup.md](docs/simulation_setup.md) | MuJoCo 环境准备和 bridge 启动 |
+本仓库用于在没有真实机器人的情况下，通过 SDK 在仿真环境中开发和验证 HighLevel
+与 LowLevel 运控功能。仿真与真实硬件保持相同的 SDK 接口，验证完成的客户端代码可
+用最小改动快速迁移到真实机器人。
 
 ## 安装
 
