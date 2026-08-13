@@ -1,25 +1,10 @@
 # Uniubi Cyvet robot2sim bridge 配置
 # 用法：
-#   python -m sim2sim.robot2simulator.run_bridge --config sim2sim/configs/uniubi_cyvet.yaml --backend mujoco --viewer
+#   python -m sim2sim.robot2simulator.run_bridge --config sim2sim/configs/uniubi_cyvet.yaml --viewer
 
 xml_path: "../assets/cyvet/xml/scene_terrain.xml"
-urdf_path: "../assets/cyvet/urdf/cyvet.urdf"
 
 initial_base_pos_xyz: [0.0, 0.0, 0.8]
-
-dof_names:
-  - FL_ABAD_JOINT
-  - FL_HIP_JOINT
-  - FL_KNEE_JOINT
-  - FR_ABAD_JOINT
-  - FR_HIP_JOINT
-  - FR_KNEE_JOINT
-  - RL_ABAD_JOINT
-  - RL_HIP_JOINT
-  - RL_KNEE_JOINT
-  - RR_ABAD_JOINT
-  - RR_HIP_JOINT
-  - RR_KNEE_JOINT
 
 settling_steps: 50
 

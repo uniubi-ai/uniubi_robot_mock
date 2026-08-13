@@ -105,9 +105,16 @@ uniubi_mock/vendor/
 export MOCK_ROOT=/uniubi_mock
 export LD_LIBRARY_PATH=$MOCK_ROOT/vendor/usr/lib:${LD_LIBRARY_PATH}
 
-sudo pkill -x robotMonitorServer || true
-sudo pkill -x robotServer || true
-sudo pkill -x motionServer || true
+# monitor 会拉起受管服务，重启时必须先停止 monitor。
+sudo pkill -TERM -f "^$MOCK_ROOT/vendor/usr/bin/robotMonitorServer( |$)" || true
+sleep 2
+sudo pkill -KILL -f "^$MOCK_ROOT/vendor/usr/bin/robotMonitorServer( |$)" || true
+sudo pkill -TERM -f "^$MOCK_ROOT/vendor/usr/bin/robotServer( |$)" || true
+sudo pkill -TERM -f "^$MOCK_ROOT/vendor/usr/bin/motionServer( |$)" || true
+sleep 2
+sudo pkill -KILL -f "^$MOCK_ROOT/vendor/usr/bin/robotServer( |$)" || true
+sudo pkill -KILL -f "^$MOCK_ROOT/vendor/usr/bin/motionServer( |$)" || true
+sudo rm -f /tmp/memoryConfig /tmp/robot_monitor /tmp/roudiMonitor /tmp/roudiMonitor.lock
 
 sudo env LD_LIBRARY_PATH=$MOCK_ROOT/vendor/usr/lib:${LD_LIBRARY_PATH} \
   $MOCK_ROOT/vendor/usr/bin/robotMonitorServer -C $MOCK_ROOT/etc/uos/robotMonitor &
@@ -118,6 +125,10 @@ sudo env LD_LIBRARY_PATH=$MOCK_ROOT/vendor/usr/lib:${LD_LIBRARY_PATH} \
 sudo env LD_LIBRARY_PATH=$MOCK_ROOT/vendor/usr/lib:${LD_LIBRARY_PATH} \
   $MOCK_ROOT/vendor/usr/bin/robotServer $MOCK_ROOT/etc/uos/robotServer true &
 ```
+
+三个服务必须使用 `sudo` 启动。MotionServer 会创建实时调度线程；普通用户启动时，
+RPC 可能仍能连接，但控制线程会因权限不足而没有运行。建议等待三个服务 ready 后，
+再启动 MuJoCo bridge 和 SDK client。
 
 运行时日志由 monitor/log 配置写入 `/uniubi_mock/data/logger/log`。
 
@@ -229,9 +240,14 @@ sudo rm -f /tmp/memoryConfig
 如需从 VM 移除 mock 环境：
 
 ```bash
-sudo pkill -x robotServer || true
-sudo pkill -x motionServer || true
-sudo pkill -x robotMonitorServer || true
+sudo pkill -TERM -f '^/uniubi_mock/vendor/usr/bin/robotMonitorServer( |$)' || true
+sleep 2
+sudo pkill -KILL -f '^/uniubi_mock/vendor/usr/bin/robotMonitorServer( |$)' || true
+sudo pkill -TERM -f '^/uniubi_mock/vendor/usr/bin/robotServer( |$)' || true
+sudo pkill -TERM -f '^/uniubi_mock/vendor/usr/bin/motionServer( |$)' || true
+sleep 2
+sudo pkill -KILL -f '^/uniubi_mock/vendor/usr/bin/robotServer( |$)' || true
+sudo pkill -KILL -f '^/uniubi_mock/vendor/usr/bin/motionServer( |$)' || true
 sudo rm -rf /uniubi_mock
 ```
 

@@ -8,3 +8,11 @@ Original UniUbi source code and documentation in this repository are made
 available under Apache-2.0. Third-party components, generated artifacts, model
 assets, training data, model weights, and precompiled binaries are not covered
 by the repository-level license unless explicitly stated.
+
+Third-party notices
+-------------------
+
+oneTBB 2021.5.0
+Copyright 2005-2021 Intel Corporation
+https://github.com/oneapi-src/oneTBB
+Licensed under the Apache License, Version 2.0.

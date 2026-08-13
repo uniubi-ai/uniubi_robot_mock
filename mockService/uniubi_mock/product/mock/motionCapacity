@@ -102,24 +102,12 @@
     },
     "posture": [
         {
-            "action": "enableAction"
-        },
-        {
-            "action": "disableAction",
-            "delayDisable": 0.0
-        },
-        {
             "action": "emergencyStop",
-            "delayDisable": 0.0,
+            "delayDisable": 0,
             "disableCheckDelay": 100
         },
         {
             "action": "laying",
-            "safeTerrain": {
-                "tilt": 10,
-                "slopeX": 10,
-                "slopeY": 10
-            },
             "assemble": {
                 "laying": [
                     "laying",
@@ -132,16 +120,58 @@
                     "standing",
                     "walking"
                 ],
-                "emergencyStop": [
-                    "emergencyStop"
+                "waveHand": [
+                    "standing",
+                    "waveHand",
+                    "walking"
+                ],
+                "bipedStand": [
+                    "standing",
+                    "walking",
+                    "bipedStand",
+                    "walking"
+                ],
+                "handstand": [
+                    "standing",
+                    "walking",
+                    "handstand",
+                    "walking"
+                ],
+                "leftSideStand": [
+                    "standing",
+                    "walking",
+                    "leftSideStand",
+                    "walking"
+                ],
+                "rightSideStand": [
+                    "standing",
+                    "walking",
+                    "rightSideStand",
+                    "walking"
                 ]
             },
-            "cancelAction": [
-                "standing",
-                "emergencyStop"
-            ],
-            "duration": 2.0,
+            "duration": 2,
             "controlPeriod": 50,
+            "maxStepRad": 0.25,
+            "stallProtection": {
+                "enable": true,
+                "triggerDuration": 0.25,
+                "kpRampDuration": 0.2,
+                "kp": [
+                    130,
+                    130,
+                    130,
+                    130,
+                    130,
+                    130,
+                    130,
+                    130,
+                    140,
+                    130,
+                    130,
+                    140
+                ]
+            },
             "output": {
                 "kp": [
                     90,
@@ -172,8 +202,6 @@
                     2.5
                 ]
             },
-            "kp": 80.0,
-            "kd": 1.0,
             "position": [
                 0.48,
                 1.1,
@@ -187,15 +215,15 @@
                 -0.48,
                 1.1,
                 -2.72
+            ],
+            "cancelAction": [
+                "standing",
+                "walking",
+                "emergencyStop"
             ]
         },
         {
             "action": "standing",
-            "safeTerrain": {
-                "tilt": 10,
-                "slopeX": 10,
-                "slopeY": 10
-            },
             "assemble": {
                 "laying": [
                     "laying",
@@ -207,30 +235,81 @@
                 "walking": [
                     "walking"
                 ],
-                "jumpFrontflip": [
-                    "standing",
-                    "jumpFrontflip",
+                "waveHand": [
+                    "waveHand",
                     "walking"
                 ],
-                "jumpBackflip": [
-                    "jumpBackflip",
+                "bipedStand": [
+                    "walking",
+                    "bipedStand",
                     "walking"
                 ],
-                "jumpSideflip": [
-                    "standing",
-                    "jumpSideflip",
+                "handstand": [
+                    "walking",
+                    "handstand",
                     "walking"
                 ],
-                "emergencyStop": [
-                    "emergencyStop"
+                "leftSideStand": [
+                    "walking",
+                    "leftSideStand",
+                    "walking"
+                ],
+                "rightSideStand": [
+                    "walking",
+                    "rightSideStand",
+                    "walking"
                 ]
             },
+            "switchAction": [
+                {
+                    "posture": "walking",
+                    "buttons": [
+                        "buttonBack"
+                    ]
+                },
+                {
+                    "posture": "standing",
+                    "buttons": [
+                        "buttonStart"
+                    ]
+                }
+            ],
             "cancelAction": [
                 "laying",
+                "walking",
+                "waveHand",
+                "bipedStand",
+                "handstand",
+                "leftSideStand",
+                "rightSideStand",
                 "emergencyStop"
             ],
-            "duration": 2.0,
+            "fallDetection": {
+                "enable": true,
+                "immediateUpright": 0
+            },
+            "duration": 2,
             "controlPeriod": 50,
+            "maxStepRad": 0.25,
+            "stallProtection": {
+                "enable": true,
+                "triggerDuration": 0.25,
+                "kpRampDuration": 0.2,
+                "kp": [
+                    130,
+                    130,
+                    130,
+                    130,
+                    130,
+                    130,
+                    130,
+                    130,
+                    140,
+                    130,
+                    130,
+                    140
+                ]
+            },
             "output": {
                 "kp": [
                     90,
@@ -261,19 +340,17 @@
                     2.5
                 ]
             },
-            "kp": 80.0,
-            "kd": 1.0,
             "position": [
-                0.0,
+                0,
                 0.8,
                 -1.5,
-                0.0,
+                0,
                 0.8,
                 -1.5,
-                0.0,
+                0,
                 0.8,
                 -1.5,
-                0.0,
+                0,
                 0.8,
                 -1.5
             ],
@@ -293,11 +370,105 @@
             ]
         },
         {
-            "action": "walking",
+            "action": "waveHand",
             "assemble": {
                 "laying": [
+                    "waveHand",
                     "laying",
                     "disableAction"
+                ],
+                "standing": [
+                    "waveHand",
+                    "standing"
+                ],
+                "walking": [
+                    "waveHand",
+                    "walking"
+                ],
+                "bipedStand": [
+                    "waveHand",
+                    "walking",
+                    "bipedStand",
+                    "walking"
+                ],
+                "handstand": [
+                    "waveHand",
+                    "walking",
+                    "handstand",
+                    "walking"
+                ],
+                "leftSideStand": [
+                    "waveHand",
+                    "walking",
+                    "leftSideStand",
+                    "walking"
+                ],
+                "rightSideStand": [
+                    "waveHand",
+                    "walking",
+                    "rightSideStand",
+                    "walking"
+                ]
+            },
+            "cancelAction": [
+                "walking",
+                "standing",
+                "laying",
+                "bipedStand",
+                "handstand",
+                "leftSideStand",
+                "rightSideStand",
+                "emergencyStop"
+            ],
+            "switchAction": [
+                {
+                    "posture": "walking",
+                    "buttons": [
+                        "buttonBack"
+                    ]
+                }
+            ],
+            "controlPeriod": 50,
+            "denseTrajectoryPath": "wave_hand_cartesian_c2_v1.bin",
+            "output": {
+                "kp": [
+                    80,
+                    80,
+                    80,
+                    25,
+                    25,
+                    25,
+                    120,
+                    120,
+                    120,
+                    120,
+                    120,
+                    120
+                ],
+                "kd": [
+                    3,
+                    3,
+                    3,
+                    1,
+                    1,
+                    1,
+                    3,
+                    3,
+                    3,
+                    3,
+                    3,
+                    3
+                ]
+            }
+        },
+        {
+            "action": "walking",
+            "odometry": {
+                "publishFrequencyHz": 50
+            },
+            "assemble": {
+                "laying": [
+                    "laying"
                 ],
                 "standing": [
                     "standing"
@@ -305,27 +476,96 @@
                 "walking": [
                     "walking"
                 ],
-                "emergencyStop": [
-                    "emergencyStop"
-                ],
-                "jumpFrontflip": [
-                    "standing",
-                    "jumpFrontflip",
+                "waveHand": [
+                    "waveHand",
                     "walking"
                 ],
-                "jumpBackflip": [
-                    "jumpBackflip",
+                "bipedStand": [
+                    "bipedStand",
                     "walking"
                 ],
-                "jumpSideflip": [
-                    "standing",
-                    "jumpSideflip",
+                "handstand": [
+                    "handstand",
+                    "walking"
+                ],
+                "leftSideStand": [
+                    "leftSideStand",
+                    "walking"
+                ],
+                "rightSideStand": [
+                    "rightSideStand",
                     "walking"
                 ]
             },
-            "models": [
-                "walk_speeddistill_0618_model600_embednorm.encode"
+            "cancelAction": [
+                "standing",
+                "waveHand"
             ],
+            "policy": {
+                "default": "slow",
+                "profiles": {
+                    "slow": {
+                        "controlProfile": 0,
+                        "model": "model_300_actions12_odom2_embednorm_fp32.encode",
+                        "layers": [
+                            "obs_history_flat"
+                        ],
+                        "commandLimit": {
+                            "commandDeadband": {
+                                "velocityX": 0.2,
+                                "velocityY": 0.1,
+                                "yawVelocity": 0.2
+                            },
+                            "yawByVelocity": {
+                                "lowVelocity": 0,
+                                "lowYawVelocity": 3,
+                                "highVelocity": 1.5,
+                                "highYawVelocity": 1.5
+                            },
+                            "velocityEllipsoid": {
+                                "maxVelocityX": 1.5,
+                                "maxVelocityY": 1,
+                                "maxYawVelocity": 3,
+                                "velocityYPriority": {
+                                    "jointLoadStart": 0.4,
+                                    "jointLoadFull": 0.7,
+                                    "minVelocityYRetention": 0
+                                }
+                            }
+                        }
+                    },
+                    "fast": {
+                        "controlProfile": 1,
+                        "model": "model_250_actions12_odom2_embednorm_fp32.encode",
+                        "layers": [
+                            "obs_history_flat"
+                        ],
+                        "commandLimit": {
+                            "commandDeadband": {
+                                "velocityX": 0.2,
+                                "velocityY": 0.2,
+                                "yawVelocity": 0.2
+                            },
+                            "yawByVelocity": {
+                                "lowVelocity": 1,
+                                "lowYawVelocity": 3,
+                                "highVelocity": 3,
+                                "highYawVelocity": 1.5
+                            },
+                            "velocityEllipsoid": {
+                                "maxVelocityX": 3,
+                                "maxVelocityY": 1,
+                                "maxYawVelocity": 3,
+                                "velocityYPriority": {
+                                    "jointLoadStart": 0.4,
+                                    "jointLoadFull": 0.7,
+                                    "minVelocityYRetention": 0
+                                }
+                            }
+                        }
+                    }
+                }
+            },
             "leg2type": [
                 0,
                 4,
@@ -343,6 +583,26 @@
             "history": {
                 "dim": 45,
                 "size": 10
+            },
+            "stopCommand": {
+                "maxDeceleration": 10,
+                "zeroEpsilon": 0.2
+            },
+            "safeStop": {
+                "zeroCommandDuration": 2
+            },
+            "switchStop": {
+                "enable": true,
+                "zeroHoldDuration": 0.5,
+                "maxDuration": 1
+            },
+            "fallDetection": {
+                "enable": true,
+                "immediateUpright": 0,
+                "suspectUpright": 0.35,
+                "resetUpright": 0.45,
+                "maxOmega": 0.8,
+                "duration": 0.5
             },
             "input": {
                 "gyroScale": {
@@ -365,117 +625,19 @@
                     0.05
                 ],
                 "defaultPosition": [
-                    0.0,
+                    0,
                     0.8,
                     -1.58,
-                    0.0,
+                    0,
                     0.8,
                     -1.58,
-                    0.0,
+                    0,
                     0.8,
                     -1.58,
-                    0.0,
+                    0,
                     0.8,
                     -1.58
-                ],
-                "normalization": {
-                    "meanObserved": [
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0
-                    ],
-                    "standerObserved": [
-                        1.0,
-                        1.0,
-                        1.0,
-                        1.0,
-                        1.0,
-                        1.0,
-                        1.0,
-                        1.0,
-                        1.0,
-                        1.0,
-                        1.0,
-                        1.0,
-                        1.0,
-                        1.0,
-                        1.0,
-                        1.0,
-                        1.0,
-                        1.0,
-                        1.0,
-                        1.0,
-                        1.0,
-                        1.0,
-                        1.0,
-                        1.0,
-                        1.0,
-                        1.0,
-                        1.0,
-                        1.0,
-                        1.0,
-                        1.0,
-                        1.0,
-                        1.0,
-                        1.0,
-                        1.0,
-                        1.0,
-                        1.0,
-                        1.0,
-                        1.0,
-                        1.0,
-                        1.0,
-                        1.0,
-                        1.0,
-                        1.0,
-                        1.0,
-                        1.0
-                    ],
-                    "observedEps": 0.0,
-                    "observedLimit": 0.0
-                }
+                ]
             },
             "output": {
                 "kp": [
@@ -493,18 +655,18 @@
                     35
                 ],
                 "kd": [
-                    1.0,
-                    1.0,
-                    1.0,
-                    1.0,
-                    1.0,
-                    1.0,
-                    1.0,
-                    1.0,
-                    1.0,
-                    1.0,
-                    1.0,
-                    1.0
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1
                 ],
                 "scalePosition": [
                     0.25,
@@ -520,228 +682,289 @@
                     0.25,
                     0.25
                 ],
-                "safePosition": [
-                    0.0,
-                    0.8,
-                    -1.5,
-                    0.0,
-                    0.8,
-                    -1.5,
-                    0.0,
-                    0.8,
-                    -1.5,
-                    0.0,
-                    0.8,
-                    -1.5
-                ],
                 "limitUpPosition": [
                     0.5233,
-                    2.7475,
-                    -0.6978,
+                    2.8,
+                    -0.5,
                     0.5233,
-                    2.7475,
-                    -0.6978,
+                    2.8,
+                    -0.5,
                     0.5233,
-                    2.7475,
-                    -0.6978,
+                    2.8,
+                    -0.5,
                     0.5233,
-                    2.7475,
-                    -0.6978
+                    2.8,
+                    -0.5
                 ],
                 "limitDownPosition": [
                     -0.5233,
-                    -1.1775,
-                    -2.7562,
+                    -1.2,
+                    -2.7,
                     -0.5233,
-                    -1.1775,
-                    -2.7562,
+                    -1.2,
+                    -2.7,
                     -0.5233,
-                    -1.1775,
-                    -2.7562,
+                    -1.2,
+                    -2.7,
                     -0.5233,
-                    -1.1775,
-                    -2.7562
+                    -1.2,
+                    -2.7
+                ]
+            }
+        },
+        {
+            "action": "recovery",
+            "assemble": {
+                "walking": [
+                    "walking"
                 ]
             },
-            "walk_speeddistill_0618_model600_embednorm.encode": {
-                "layers": [
-                    "obs_history_flat"
-                ]
-            },
-            "safeStop": {
-                "zeroCommandDuration": 2.0
+            "cancelAction": [
+                "emergencyStop"
+            ],
+            "models": [
+                "recovery_dwaq_model7199_fp32.encode"
+            ],
+            "leg2type": [
+                0,
+                1,
+                2,
+                3,
+                4,
+                5,
+                6,
+                7,
+                8,
+                9,
+                10,
+                11
+            ],
+            "history": {
+                "dim": 45,
+                "size": 10
             },
             "recoveryStop": {
                 "enable": true,
-                "timeout": 5.0,
-                "uprightThreshold": 0.5
-            }
-        },
-        {
-            "action": "jumpFrontflip",
-            "safeTerrain": {
-                "tilt": 0,
-                "slopeX": 0,
-                "slopeY": 0
+                "timeout": 6,
+                "maxRetries": 1
             },
-            "assemble": {
-                "emergencyStop": [
-                    "emergencyStop"
-                ]
+            "fallArrest": {
+                "settledOmega": 0.6,
+                "settledDuration": 0.2,
+                "fallbackDuration": 1.2,
+                "fallbackOmega": 1.5,
+                "maxDuration": 3
             },
-            "cancelAction": [
-                "emergencyStop"
-            ],
-            "models": [
-                "model_25799_fp32_teacher.encode"
-            ],
-            "phase": [
-                {
-                    "duration": 2.0,
-                    "smooth": 0.5,
-                    "name": "frontflip"
-                }
-            ],
-            "backPhase": [],
-            "leg2type": [
-                0,
-                1,
-                2,
-                3,
-                4,
-                5,
-                6,
-                7,
-                8,
-                9,
-                10,
-                11
-            ],
-            "history": {
-                "dim": 60,
-                "size": 1
+            "postFallReposition": {
+                "enable": true,
+                "upright": 0.8,
+                "maxOmega": 0.6,
+                "holdDuration": 0.3
             },
-            "actionScale": 0.5,
+            "entryTargetLimit": {
+                "enable": true,
+                "duration": 0.3,
+                "rate": 10
+            },
+            "completion": {
+                "minDuration": 1,
+                "upright": 0.8,
+                "maxOmega": 0.5,
+                "holdDuration": 0.5,
+                "maxGraceDuration": 0.7
+            },
             "input": {
+                "gyroScale": {
+                    "roll": 0.25,
+                    "pitch": 0.25,
+                    "yaw": 0.25
+                },
+                "velocityScale": [
+                    0.05,
+                    0.05,
+                    0.05,
+                    0.05,
+                    0.05,
+                    0.05,
+                    0.05,
+                    0.05,
+                    0.05,
+                    0.05,
+                    0.05,
+                    0.05
+                ],
                 "defaultPosition": [
-                    0.0,
+                    0,
                     0.8,
                     -1.58,
-                    0.0,
+                    0,
                     0.8,
                     -1.58,
-                    0.0,
+                    0,
                     0.8,
                     -1.58,
-                    0.0,
+                    0,
                     0.8,
                     -1.58
                 ]
             },
             "output": {
                 "kp": [
-                    25,
-                    25,
-                    25,
-                    25,
-                    25,
-                    25,
-                    25,
-                    25,
-                    25,
-                    25,
-                    25,
-                    25
+                    35,
+                    35,
+                    35,
+                    35,
+                    35,
+                    35,
+                    35,
+                    35,
+                    35,
+                    35,
+                    35,
+                    35
                 ],
                 "kd": [
-                    0.7,
-                    0.7,
-                    0.7,
-                    0.7,
-                    0.7,
-                    0.7,
-                    0.7,
-                    0.7,
-                    0.7,
-                    0.7,
-                    0.7,
-                    0.7
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1
                 ],
                 "scalePosition": [
-                    0.5,
-                    0.5,
-                    0.5,
-                    0.5,
-                    0.5,
-                    0.5,
-                    0.5,
-                    0.5,
-                    0.5,
-                    0.5,
-                    0.5,
-                    0.5
+                    0.25,
+                    0.25,
+                    0.25,
+                    0.25,
+                    0.25,
+                    0.25,
+                    0.25,
+                    0.25,
+                    0.25,
+                    0.25,
+                    0.25,
+                    0.25
                 ],
                 "limitUpPosition": [
-                    10.0,
-                    10.0,
-                    10.0,
-                    10.0,
-                    10.0,
-                    10.0,
-                    10.0,
-                    10.0,
-                    10.0,
-                    10.0,
-                    10.0,
-                    10.0
+                    0.4733,
+                    2.6975,
+                    -0.7478,
+                    0.4733,
+                    2.6975,
+                    -0.7478,
+                    0.4733,
+                    2.6975,
+                    -0.7478,
+                    0.4733,
+                    2.6975,
+                    -0.7478
                 ],
                 "limitDownPosition": [
-                    -10.0,
-                    -10.0,
-                    -10.0,
-                    -10.0,
-                    -10.0,
-                    -10.0,
-                    -10.0,
-                    -10.0,
-                    -10.0,
-                    -10.0,
-                    -10.0,
-                    -10.0
+                    -0.4733,
+                    -1.1275,
+                    -2.7062,
+                    -0.4733,
+                    -1.1275,
+                    -2.7062,
+                    -0.4733,
+                    -1.1275,
+                    -2.7062,
+                    -0.4733,
+                    -1.1275,
+                    -2.7062
                 ]
             },
-            "model_25799_fp32_teacher.encode": {
+            "recovery_dwaq_model7199_fp32.encode": {
                 "layers": [
                     "obs"
                 ]
             }
         },
         {
-            "action": "jumpSideflip",
-            "safeTerrain": {
-                "tilt": 0,
-                "slopeX": 0,
-                "slopeY": 0
-            },
+            "action": "bipedStand",
+            "minVoltage": 41,
             "assemble": {
-                "emergencyStop": [
-                    "emergencyStop"
+                "laying": [
+                    "laying"
+                ],
+                "standing": [
+                    "standing"
+                ],
+                "walking": [
+                    "walking"
+                ],
+                "waveHand": [
+                    "standing",
+                    "waveHand",
+                    "walking"
+                ],
+                "bipedStand": [
+                    "bipedStand",
+                    "walking"
+                ],
+                "handstand": [
+                    "handstand",
+                    "walking"
+                ],
+                "leftSideStand": [
+                    "leftSideStand",
+                    "walking"
+                ],
+                "rightSideStand": [
+                    "rightSideStand",
+                    "walking"
                 ]
             },
-            "cancelAction": [
-                "emergencyStop"
-            ],
-            "models": [
-                "model_17698_fp32_teacher.encode"
-            ],
-            "phase": [
+            "switchAction": [
                 {
-                    "duration": 2.0,
-                    "smooth": 0.5,
-                    "name": "sideflip"
+                    "posture": "walking",
+                    "buttons": [
+                        "buttonBack"
+                    ]
+                },
+                {
+                    "posture": "standing",
+                    "buttons": [
+                        "buttonStart"
+                    ]
                 }
             ],
-            "backPhase": [],
+            "cancelAction": [
+                "standing",
+                "walking",
+                "laying",
+                "waveHand",
+                "bipedStand",
+                "handstand",
+                "leftSideStand",
+                "rightSideStand",
+                "emergencyStop"
+            ],
+            "phase": {
+                "active": {
+                    "duration": 0.5
+                },
+                "hold": {
+                    "duration": -1
+                },
+                "exit": {
+                    "duration": 1
+                }
+            },
+            "upsideDownExit": {
+                "enable": true,
+                "gravityZ": 0.7,
+                "confirmFrames": 3
+            },
+            "models": [
+                "uni5stage_4dir_biped_ml6_model3400_fp32.encode"
+            ],
             "leg2type": [
                 0,
                 1,
@@ -757,22 +980,72 @@
                 11
             ],
             "history": {
-                "dim": 60,
-                "size": 1
+                "dim": 42,
+                "size": 10
             },
-            "actionScale": 0.5,
+            "cycleTime": 0.4,
+            "normalization": {
+                "clipObs": 8,
+                "clipActions": 100,
+                "actionScale": 0.25,
+                "gyroScale": 0.25,
+                "linVelScale": 2,
+                "dofPosScale": 1,
+                "dofVelScale": 0.05
+            },
             "input": {
+                "gyroScale": {
+                    "roll": 0.25,
+                    "pitch": 0.25,
+                    "yaw": 0.25
+                },
+                "lineVelocityScale": {
+                    "x": 2,
+                    "y": 2
+                },
+                "positionScale": [
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1
+                ],
+                "velocityScale": [
+                    0.05,
+                    0.05,
+                    0.05,
+                    0.05,
+                    0.05,
+                    0.05,
+                    0.05,
+                    0.05,
+                    0.05,
+                    0.05,
+                    0.05,
+                    0.05
+                ],
+                "normalization": {
+                    "observedLimit": 8,
+                    "cycleTime": 0.4
+                },
                 "defaultPosition": [
-                    0.0,
+                    0,
                     0.8,
                     -1.58,
-                    0.0,
+                    0,
                     0.8,
                     -1.58,
-                    0.0,
+                    0,
                     0.8,
                     -1.58,
-                    0.0,
+                    0,
                     0.8,
                     -1.58
                 ]
@@ -807,80 +1080,133 @@
                     0.7
                 ],
                 "scalePosition": [
-                    0.5,
-                    0.5,
-                    0.5,
-                    0.5,
-                    0.5,
-                    0.5,
-                    0.5,
-                    0.5,
-                    0.5,
-                    0.5,
-                    0.5,
-                    0.5
+                    0.25,
+                    0.25,
+                    0.25,
+                    0.25,
+                    0.25,
+                    0.25,
+                    0.25,
+                    0.25,
+                    0.25,
+                    0.25,
+                    0.25,
+                    0.25
                 ],
                 "limitUpPosition": [
-                    10.0,
-                    10.0,
-                    10.0,
-                    10.0,
-                    10.0,
-                    10.0,
-                    10.0,
-                    10.0,
-                    10.0,
-                    10.0,
-                    10.0,
-                    10.0
+                    10,
+                    10,
+                    10,
+                    10,
+                    10,
+                    10,
+                    10,
+                    10,
+                    10,
+                    10,
+                    10,
+                    10
                 ],
                 "limitDownPosition": [
-                    -10.0,
-                    -10.0,
-                    -10.0,
-                    -10.0,
-                    -10.0,
-                    -10.0,
-                    -10.0,
-                    -10.0,
-                    -10.0,
-                    -10.0,
-                    -10.0,
-                    -10.0
+                    -10,
+                    -10,
+                    -10,
+                    -10,
+                    -10,
+                    -10,
+                    -10,
+                    -10,
+                    -10,
+                    -10,
+                    -10,
+                    -10
                 ]
             },
-            "model_17698_fp32_teacher.encode": {
+            "uni5stage_4dir_biped_ml6_model3400_fp32.encode": {
                 "layers": [
                     "obs"
                 ]
             }
         },
         {
-            "action": "jumpBackflip",
-            "safeTerrain": {
-                "tilt": 0,
-                "slopeX": 0,
-                "slopeY": 0
-            },
+            "action": "handstand",
+            "minVoltage": 41,
             "assemble": {
-                "emergencyStop": [
-                    "emergencyStop"
+                "laying": [
+                    "laying"
+                ],
+                "standing": [
+                    "standing"
+                ],
+                "walking": [
+                    "walking"
+                ],
+                "waveHand": [
+                    "standing",
+                    "waveHand",
+                    "walking"
+                ],
+                "bipedStand": [
+                    "bipedStand",
+                    "walking"
+                ],
+                "handstand": [
+                    "handstand",
+                    "walking"
+                ],
+                "leftSideStand": [
+                    "leftSideStand",
+                    "walking"
+                ],
+                "rightSideStand": [
+                    "rightSideStand",
+                    "walking"
                 ]
             },
-            "cancelAction": [
-                "emergencyStop"
-            ],
-            "models": [
-                "model_23997_fp32_teacher.encode"
-            ],
-            "phase": [
+            "switchAction": [
                 {
-                    "duration": 2.0,
-                    "smooth": 0.5,
-                    "name": "backflip"
+                    "posture": "walking",
+                    "buttons": [
+                        "buttonBack"
+                    ]
+                },
+                {
+                    "posture": "standing",
+                    "buttons": [
+                        "buttonStart"
+                    ]
                 }
             ],
-            "backPhase": [],
+            "cancelAction": [
+                "standing",
+                "walking",
+                "laying",
+                "waveHand",
+                "bipedStand",
+                "handstand",
+                "leftSideStand",
+                "rightSideStand",
+                "emergencyStop"
+            ],
+            "phase": {
+                "active": {
+                    "duration": 0.5
+                },
+                "hold": {
+                    "duration": -1
+                },
+                "exit": {
+                    "duration": 1
+                }
+            },
+            "upsideDownExit": {
+                "enable": true,
+                "gravityZ": 0.7,
+                "confirmFrames": 3
+            },
+            "models": [
+                "uni5stage_4dir_biped_ml6_model3400_fp32.encode"
+            ],
             "leg2type": [
                 0,
                 1,
@@ -896,22 +1222,72 @@
                 11
             ],
             "history": {
-                "dim": 60,
-                "size": 1
+                "dim": 42,
+                "size": 10
             },
-            "actionScale": 0.5,
+            "cycleTime": 0.4,
+            "normalization": {
+                "clipObs": 8,
+                "clipActions": 100,
+                "actionScale": 0.25,
+                "gyroScale": 0.25,
+                "linVelScale": 2,
+                "dofPosScale": 1,
+                "dofVelScale": 0.05
+            },
             "input": {
+                "gyroScale": {
+                    "roll": 0.25,
+                    "pitch": 0.25,
+                    "yaw": 0.25
+                },
+                "lineVelocityScale": {
+                    "x": 2,
+                    "y": 2
+                },
+                "positionScale": [
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1
+                ],
+                "velocityScale": [
+                    0.05,
+                    0.05,
+                    0.05,
+                    0.05,
+                    0.05,
+                    0.05,
+                    0.05,
+                    0.05,
+                    0.05,
+                    0.05,
+                    0.05,
+                    0.05
+                ],
+                "normalization": {
+                    "observedLimit": 8,
+                    "cycleTime": 0.4
+                },
                 "defaultPosition": [
-                    0.0,
+                    0,
                     0.8,
                     -1.58,
-                    0.0,
+                    0,
                     0.8,
                     -1.58,
-                    0.0,
+                    0,
                     0.8,
                     -1.58,
-                    0.0,
+                    0,
                     0.8,
                     -1.58
                 ]
@@ -946,75 +1322,539 @@
                     0.7
                 ],
                 "scalePosition": [
-                    0.5,
-                    0.5,
-                    0.5,
-                    0.5,
-                    0.5,
-                    0.5,
-                    0.5,
-                    0.5,
-                    0.5,
-                    0.5,
-                    0.5,
-                    0.5
+                    0.25,
+                    0.25,
+                    0.25,
+                    0.25,
+                    0.25,
+                    0.25,
+                    0.25,
+                    0.25,
+                    0.25,
+                    0.25,
+                    0.25,
+                    0.25
                 ],
                 "limitUpPosition": [
-                    10.0,
-                    10.0,
-                    10.0,
-                    10.0,
-                    10.0,
-                    10.0,
-                    10.0,
-                    10.0,
-                    10.0,
-                    10.0,
-                    10.0,
-                    10.0
+                    10,
+                    10,
+                    10,
+                    10,
+                    10,
+                    10,
+                    10,
+                    10,
+                    10,
+                    10,
+                    10,
+                    10
                 ],
                 "limitDownPosition": [
-                    -10.0,
-                    -10.0,
-                    -10.0,
-                    -10.0,
-                    -10.0,
-                    -10.0,
-                    -10.0,
-                    -10.0,
-                    -10.0,
-                    -10.0,
-                    -10.0,
-                    -10.0
+                    -10,
+                    -10,
+                    -10,
+                    -10,
+                    -10,
+                    -10,
+                    -10,
+                    -10,
+                    -10,
+                    -10,
+                    -10,
+                    -10
                 ]
             },
-            "model_23997_fp32_teacher.encode": {
+            "uni5stage_4dir_biped_ml6_model3400_fp32.encode": {
+                "layers": [
+                    "obs"
+                ]
+            }
+        },
+        {
+            "action": "leftSideStand",
+            "minVoltage": 41,
+            "assemble": {
+                "laying": [
+                    "laying"
+                ],
+                "standing": [
+                    "standing"
+                ],
+                "walking": [
+                    "walking"
+                ],
+                "waveHand": [
+                    "standing",
+                    "waveHand",
+                    "walking"
+                ],
+                "bipedStand": [
+                    "bipedStand",
+                    "walking"
+                ],
+                "handstand": [
+                    "handstand",
+                    "walking"
+                ],
+                "leftSideStand": [
+                    "leftSideStand",
+                    "walking"
+                ],
+                "rightSideStand": [
+                    "rightSideStand",
+                    "walking"
+                ]
+            },
+            "switchAction": [
+                {
+                    "posture": "walking",
+                    "buttons": [
+                        "buttonBack"
+                    ]
+                },
+                {
+                    "posture": "standing",
+                    "buttons": [
+                        "buttonStart"
+                    ]
+                }
+            ],
+            "cancelAction": [
+                "standing",
+                "walking",
+                "laying",
+                "waveHand",
+                "bipedStand",
+                "handstand",
+                "leftSideStand",
+                "rightSideStand",
+                "emergencyStop"
+            ],
+            "phase": {
+                "active": {
+                    "duration": 0.5
+                },
+                "hold": {
+                    "duration": -1
+                },
+                "exit": {
+                    "duration": 1
+                }
+            },
+            "upsideDownExit": {
+                "enable": true,
+                "gravityZ": 0.7,
+                "confirmFrames": 3
+            },
+            "models": [
+                "uni5stage_4dir_biped_ml6_model3400_fp32.encode"
+            ],
+            "leg2type": [
+                0,
+                1,
+                2,
+                3,
+                4,
+                5,
+                6,
+                7,
+                8,
+                9,
+                10,
+                11
+            ],
+            "history": {
+                "dim": 42,
+                "size": 10
+            },
+            "cycleTime": 0.4,
+            "normalization": {
+                "clipObs": 8,
+                "clipActions": 100,
+                "actionScale": 0.25,
+                "gyroScale": 0.25,
+                "linVelScale": 2,
+                "dofPosScale": 1,
+                "dofVelScale": 0.05
+            },
+            "input": {
+                "gyroScale": {
+                    "roll": 0.25,
+                    "pitch": 0.25,
+                    "yaw": 0.25
+                },
+                "lineVelocityScale": {
+                    "x": 2,
+                    "y": 2
+                },
+                "positionScale": [
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1
+                ],
+                "velocityScale": [
+                    0.05,
+                    0.05,
+                    0.05,
+                    0.05,
+                    0.05,
+                    0.05,
+                    0.05,
+                    0.05,
+                    0.05,
+                    0.05,
+                    0.05,
+                    0.05
+                ],
+                "normalization": {
+                    "observedLimit": 8,
+                    "cycleTime": 0.4
+                },
+                "defaultPosition": [
+                    0,
+                    0.8,
+                    -1.58,
+                    0,
+                    0.8,
+                    -1.58,
+                    0,
+                    0.8,
+                    -1.58,
+                    0,
+                    0.8,
+                    -1.58
+                ]
+            },
+            "output": {
+                "kp": [
+                    25,
+                    25,
+                    25,
+                    25,
+                    25,
+                    25,
+                    25,
+                    25,
+                    25,
+                    25,
+                    25,
+                    25
+                ],
+                "kd": [
+                    0.7,
+                    0.7,
+                    0.7,
+                    0.7,
+                    0.7,
+                    0.7,
+                    0.7,
+                    0.7,
+                    0.7,
+                    0.7,
+                    0.7,
+                    0.7
+                ],
+                "scalePosition": [
+                    0.25,
+                    0.25,
+                    0.25,
+                    0.25,
+                    0.25,
+                    0.25,
+                    0.25,
+                    0.25,
+                    0.25,
+                    0.25,
+                    0.25,
+                    0.25
+                ],
+                "limitUpPosition": [
+                    10,
+                    10,
+                    10,
+                    10,
+                    10,
+                    10,
+                    10,
+                    10,
+                    10,
+                    10,
+                    10,
+                    10
+                ],
+                "limitDownPosition": [
+                    -10,
+                    -10,
+                    -10,
+                    -10,
+                    -10,
+                    -10,
+                    -10,
+                    -10,
+                    -10,
+                    -10,
+                    -10,
+                    -10
+                ]
+            },
+            "uni5stage_4dir_biped_ml6_model3400_fp32.encode": {
+                "layers": [
+                    "obs"
+                ]
+            }
+        },
+        {
+            "action": "rightSideStand",
+            "minVoltage": 41,
+            "assemble": {
+                "laying": [
+                    "laying"
+                ],
+                "standing": [
+                    "standing"
+                ],
+                "walking": [
+                    "walking"
+                ],
+                "waveHand": [
+                    "standing",
+                    "waveHand",
+                    "walking"
+                ],
+                "bipedStand": [
+                    "bipedStand",
+                    "walking"
+                ],
+                "handstand": [
+                    "handstand",
+                    "walking"
+                ],
+                "leftSideStand": [
+                    "leftSideStand",
+                    "walking"
+                ],
+                "rightSideStand": [
+                    "rightSideStand",
+                    "walking"
+                ]
+            },
+            "switchAction": [
+                {
+                    "posture": "walking",
+                    "buttons": [
+                        "buttonBack"
+                    ]
+                },
+                {
+                    "posture": "standing",
+                    "buttons": [
+                        "buttonStart"
+                    ]
+                }
+            ],
+            "cancelAction": [
+                "standing",
+                "walking",
+                "laying",
+                "waveHand",
+                "bipedStand",
+                "handstand",
+                "leftSideStand",
+                "rightSideStand",
+                "emergencyStop"
+            ],
+            "phase": {
+                "active": {
+                    "duration": 0.5
+                },
+                "hold": {
+                    "duration": -1
+                },
+                "exit": {
+                    "duration": 1
+                }
+            },
+            "upsideDownExit": {
+                "enable": true,
+                "gravityZ": 0.7,
+                "confirmFrames": 3
+            },
+            "models": [
+                "uni5stage_4dir_biped_ml6_model3400_fp32.encode"
+            ],
+            "leg2type": [
+                0,
+                1,
+                2,
+                3,
+                4,
+                5,
+                6,
+                7,
+                8,
+                9,
+                10,
+                11
+            ],
+            "history": {
+                "dim": 42,
+                "size": 10
+            },
+            "cycleTime": 0.4,
+            "normalization": {
+                "clipObs": 8,
+                "clipActions": 100,
+                "actionScale": 0.25,
+                "gyroScale": 0.25,
+                "linVelScale": 2,
+                "dofPosScale": 1,
+                "dofVelScale": 0.05
+            },
+            "input": {
+                "gyroScale": {
+                    "roll": 0.25,
+                    "pitch": 0.25,
+                    "yaw": 0.25
+                },
+                "lineVelocityScale": {
+                    "x": 2,
+                    "y": 2
+                },
+                "positionScale": [
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1
+                ],
+                "velocityScale": [
+                    0.05,
+                    0.05,
+                    0.05,
+                    0.05,
+                    0.05,
+                    0.05,
+                    0.05,
+                    0.05,
+                    0.05,
+                    0.05,
+                    0.05,
+                    0.05
+                ],
+                "normalization": {
+                    "observedLimit": 8,
+                    "cycleTime": 0.4
+                },
+                "defaultPosition": [
+                    0,
+                    0.8,
+                    -1.58,
+                    0,
+                    0.8,
+                    -1.58,
+                    0,
+                    0.8,
+                    -1.58,
+                    0,
+                    0.8,
+                    -1.58
+                ]
+            },
+            "output": {
+                "kp": [
+                    25,
+                    25,
+                    25,
+                    25,
+                    25,
+                    25,
+                    25,
+                    25,
+                    25,
+                    25,
+                    25,
+                    25
+                ],
+                "kd": [
+                    0.7,
+                    0.7,
+                    0.7,
+                    0.7,
+                    0.7,
+                    0.7,
+                    0.7,
+                    0.7,
+                    0.7,
+                    0.7,
+                    0.7,
+                    0.7
+                ],
+                "scalePosition": [
+                    0.25,
+                    0.25,
+                    0.25,
+                    0.25,
+                    0.25,
+                    0.25,
+                    0.25,
+                    0.25,
+                    0.25,
+                    0.25,
+                    0.25,
+                    0.25
+                ],
+                "limitUpPosition": [
+                    10,
+                    10,
+                    10,
+                    10,
+                    10,
+                    10,
+                    10,
+                    10,
+                    10,
+                    10,
+                    10,
+                    10
+                ],
+                "limitDownPosition": [
+                    -10,
+                    -10,
+                    -10,
+                    -10,
+                    -10,
+                    -10,
+                    -10,
+                    -10,
+                    -10,
+                    -10,
+                    -10,
+                    -10
+                ]
+            },
+            "uni5stage_4dir_biped_ml6_model3400_fp32.encode": {
                 "layers": [
                     "obs"
                 ]
             }
         }
     ],
-    "motion": {
-        "models": [],
-        "action": {
-            "assemble": {
-                "laying": [
-                    "laying",
-                    "disableAction"
-                ],
-                "standing": [
-                    "enableAction",
-                    "standing"
-                ],
-                "walking": [
-                    "enableAction",
-                    "standing",
-                    "walking"
-                ]
-            }
-        }
-    },
     "motionListen": {
         "udpMode": {
             "disable": true
@@ -1061,12 +1901,14 @@
             "paramsKey": {
                 "velocity": 0,
                 "lineVelocityX": 1,
-                "lineVelocityY": 2
+                "lineVelocityY": 2,
+                "axesRY": 3
             },
             "axesMap": {
                 "velocity": "axesRX",
                 "lineVelocityX": "axesLY",
-                "lineVelocityY": "axesLX"
+                "lineVelocityY": "axesLX",
+                "axesRY": "axesRY"
             },
             "posture": {
                 "emergencyStop": {
@@ -1075,7 +1917,8 @@
                         "buttonRB"
                     ],
                     "priority": 10,
-                    "minHoldTime": 0
+                    "minHoldTime": 0,
+                    "strictMatch": false
                 },
                 "bipedStand": {
                     "require": [
@@ -1095,9 +1938,27 @@
                     "minHoldTime": 0,
                     "exact": true
                 },
+                "leftSideStand": {
+                    "require": [
+                        "buttonLB",
+                        "buttonX"
+                    ],
+                    "priority": 1,
+                    "minHoldTime": 0,
+                    "exact": true
+                },
+                "rightSideStand": {
+                    "require": [
+                        "buttonLB",
+                        "buttonB"
+                    ],
+                    "priority": 1,
+                    "minHoldTime": 0,
+                    "exact": true
+                },
                 "laying": {
                     "require": [
-                        "buttonStart",
+                        "buttonBack",
                         "buttonA"
                     ],
                     "priority": 0,
@@ -1106,7 +1967,7 @@
                 },
                 "walking": {
                     "require": [
-                        "buttonStart",
+                        "buttonBack",
                         "buttonY"
                     ],
                     "priority": 0,
@@ -1115,108 +1976,19 @@
                 },
                 "standing": {
                     "require": [
-                        "buttonBack"
+                        "buttonStart"
                     ],
                     "priority": 0,
                     "minHoldTime": 0,
                     "exact": true
                 },
-                "waveBody": {
+                "waveHand": {
                     "require": [
-                        "buttonLB",
-                        "buttonStart"
-                    ],
-                    "priority": 2,
-                    "minHoldTime": 0,
-                    "exact": true
-                },
-                "peakLoadStand": {
-                    "require": [
-                        "buttonY"
-                    ],
-                    "priority": 2,
-                    "minHoldTime": 0,
-                    "exact": true,
-                    "axisRequire": [
-                        {
-                            "axis": "axesLT",
-                            "min": 0.5,
-                            "max": 1
-                        }
-                    ]
-                },
-                "jumpFrontflip": {
-                    "require": [
-                        "buttonRB",
-                        "buttonY"
-                    ],
-                    "priority": 1,
-                    "minHoldTime": 0,
-                    "exact": true
-                },
-                "jumpSideflip": {
-                    "require": [
-                        "buttonRB",
-                        "buttonB"
-                    ],
-                    "priority": 1,
-                    "minHoldTime": 0,
-                    "exact": true,
-                    "axisRequire": [
-                        {
-                            "axis": "axesRT",
-                            "min": -1,
-                            "max": 0.49
-                        }
-                    ]
-                },
-                "jumpBackflip": {
-                    "require": [
-                        "buttonRB",
-                        "buttonA"
-                    ],
-                    "priority": 1,
-                    "minHoldTime": 0,
-                    "exact": true,
-                    "axisRequire": [
-                        {
-                            "axis": "axesRT",
-                            "min": -1,
-                            "max": 0.49
-                        }
-                    ]
-                },
-                "jumpDoubleBackflip": {
-                    "require": [
-                        "buttonRB",
-                        "buttonA"
-                    ],
-                    "priority": 2,
-                    "minHoldTime": 0,
-                    "exact": true,
-                    "axisRequire": [
-                        {
-                            "axis": "axesRT",
-                            "min": 0.5,
-                            "max": 1
-                        }
-                    ]
-                },
-                "jumpDoubleSideflip": {
-                    "require": [
-                        "buttonRB",
                         "buttonB"
                     ],
                     "priority": 2,
-                    "minHoldTime": 0,
-                    "exact": true,
-                    "axisRequire": [
-                        {
-                            "axis": "axesRT",
-                            "min": 0.5,
-                            "max": 1
-                        }
-                    ]
+                    "minHoldTime": 1000,
+                    "exact": true
                 }
             },
             "controlProfile": {
@@ -1253,13 +2025,13 @@
                     "profiles": {
                         "slow": {
                             "velocity": {
-                                "min": -1.5,
-                                "max": 1.5,
+                                "min": -3,
+                                "max": 3,
                                 "deadZone": 0.15,
                                 "filter": {
                                     "type": "slew",
-                                    "maxAccel": 2,
-                                    "maxDecel": 2,
+                                    "maxAccel": 10,
+                                    "maxDecel": 10,
                                     "noSignCross": false
                                 }
                             },
@@ -1269,8 +2041,8 @@
                                 "deadZone": 0.15,
                                 "filter": {
                                     "type": "slew",
-                                    "maxAccel": 3,
-                                    "maxDecel": 5,
+                                    "maxAccel": 10,
+                                    "maxDecel": 10,
                                     "noSignCross": false
                                 }
                             },
@@ -1280,21 +2052,21 @@
                                 "deadZone": 0.5,
                                 "filter": {
                                     "type": "slew",
-                                    "maxAccel": 2,
-                                    "maxDecel": 2,
-                                    "noSignCross": false
+                                    "maxAccel": 7,
+                                    "maxDecel": 5,
+                                    "noSignCross": true
                                 }
                             }
                         },
                         "fast": {
                             "velocity": {
-                                "min": -1.5,
-                                "max": 1.5,
+                                "min": -3,
+                                "max": 3,
                                 "deadZone": 0.15,
                                 "filter": {
                                     "type": "slew",
-                                    "maxAccel": 2,
-                                    "maxDecel": 2,
+                                    "maxAccel": 10,
+                                    "maxDecel": 10,
                                     "noSignCross": false
                                 }
                             },
@@ -1304,8 +2076,8 @@
                                 "deadZone": 0.15,
                                 "filter": {
                                     "type": "slew",
-                                    "maxAccel": 3,
-                                    "maxDecel": 5,
+                                    "maxAccel": 10,
+                                    "maxDecel": 10,
                                     "noSignCross": false
                                 }
                             },
@@ -1315,134 +2087,225 @@
                                 "deadZone": 0.5,
                                 "filter": {
                                     "type": "slew",
-                                    "maxAccel": 2,
-                                    "maxDecel": 2,
+                                    "maxAccel": 10,
+                                    "maxDecel": 10,
                                     "noSignCross": false
                                 }
                             }
                         }
                     }
                 },
-                "jumpFrontflip": {
-                    "velocity": {
-                        "min": -2,
-                        "max": 2,
-                        "smooth": 0.5,
-                        "deadZone": 0.15
-                    },
-                    "lineVelocityX": {
-                        "min": -1,
-                        "max": 1,
-                        "smooth": 0.5,
-                        "deadZone": 0.15
-                    },
-                    "lineVelocityY": {
-                        "min": -1,
-                        "max": 1,
-                        "smooth": 0.5,
-                        "deadZone": 0.5
-                    }
-                },
-                "jumpSideflip": {
-                    "velocity": {
-                        "min": -2,
-                        "max": 2,
-                        "smooth": 0.5,
-                        "deadZone": 0.15
-                    },
-                    "lineVelocityX": {
-                        "min": -1,
-                        "max": 1,
-                        "smooth": 0.5,
-                        "deadZone": 0.15
-                    },
-                    "lineVelocityY": {
-                        "min": -1,
-                        "max": 1,
-                        "smooth": 0.5,
-                        "deadZone": 0.5
-                    }
-                },
-                "jumpBackflip": {
-                    "velocity": {
-                        "min": -2,
-                        "max": 2,
-                        "smooth": 0.5,
-                        "deadZone": 0.15
-                    },
-                    "lineVelocityX": {
-                        "min": -1,
-                        "max": 1,
-                        "smooth": 0.5,
-                        "deadZone": 0.15
-                    },
-                    "lineVelocityY": {
-                        "min": -1,
-                        "max": 1,
-                        "smooth": 0.5,
-                        "deadZone": 0.5
-                    }
-                },
                 "bipedStand": {
                     "velocity": {
-                        "min": -1,
-                        "max": 1,
-                        "smooth": 0.5,
-                        "deadZone": 0.15
+                        "min": -1.5,
+                        "max": 1.5,
+                        "deadZone": 0.1,
+                        "filter": {
+                            "type": "slew",
+                            "maxAccel": 3,
+                            "maxDecel": 3,
+                            "noSignCross": false
+                        }
                     },
                     "lineVelocityX": {
-                        "min": -0.4,
-                        "max": 0.4,
-                        "smooth": 0.5,
-                        "deadZone": 0.15
+                        "min": -0.3,
+                        "max": 0.3,
+                        "deadZone": 0.1,
+                        "filter": {
+                            "type": "slew",
+                            "maxAccel": 3,
+                            "maxDecel": 3,
+                            "noSignCross": false
+                        }
                     },
                     "lineVelocityY": {
-                        "min": 0,
-                        "max": 0,
-                        "smooth": 0.5,
-                        "deadZone": 0.5
+                        "min": -0.3,
+                        "max": 0.3,
+                        "deadZone": 0.1,
+                        "filter": {
+                            "type": "slew",
+                            "maxAccel": 3,
+                            "maxDecel": 3,
+                            "noSignCross": false
+                        }
                     }
                 },
                 "handstand": {
                     "velocity": {
-                        "min": -0.4,
-                        "max": 0.4,
-                        "smooth": 0.5,
-                        "deadZone": 0.15
+                        "min": -1.5,
+                        "max": 1.5,
+                        "deadZone": 0.1,
+                        "filter": {
+                            "type": "slew",
+                            "maxAccel": 3,
+                            "maxDecel": 3,
+                            "noSignCross": false
+                        }
                     },
                     "lineVelocityX": {
-                        "min": -0.4,
-                        "max": 0.4,
-                        "smooth": 0.5,
-                        "deadZone": 0.15
+                        "min": -0.3,
+                        "max": 0.3,
+                        "deadZone": 0.1,
+                        "filter": {
+                            "type": "slew",
+                            "maxAccel": 3,
+                            "maxDecel": 3,
+                            "noSignCross": false
+                        }
                     },
                     "lineVelocityY": {
-                        "min": 0,
-                        "max": 0,
-                        "smooth": 0.5,
-                        "deadZone": 0.5
+                        "min": -0.3,
+                        "max": 0.3,
+                        "deadZone": 0.1,
+                        "filter": {
+                            "type": "slew",
+                            "maxAccel": 3,
+                            "maxDecel": 3,
+                            "noSignCross": false
+                        }
                     }
                 },
-                "peakLoadStand": {
+                "leftSideStand": {
                     "velocity": {
-                        "min": 0,
-                        "max": 0,
-                        "smooth": 0.5,
-                        "deadZone": 0.5
+                        "min": -1.5,
+                        "max": 1.5,
+                        "deadZone": 0.1,
+                        "filter": {
+                            "type": "slew",
+                            "maxAccel": 3,
+                            "maxDecel": 3,
+                            "noSignCross": false
+                        }
                     },
                     "lineVelocityX": {
-                        "min": 0,
-                        "max": 0,
-                        "smooth": 0.5,
-                        "deadZone": 0.15
+                        "min": -0.3,
+                        "max": 0.3,
+                        "deadZone": 0.1,
+                        "filter": {
+                            "type": "slew",
+                            "maxAccel": 3,
+                            "maxDecel": 3,
+                            "noSignCross": false
+                        }
                     },
                     "lineVelocityY": {
-                        "min": 0,
-                        "max": 0,
-                        "smooth": 0.5,
-                        "deadZone": 0.15
+                        "min": -0.3,
+                        "max": 0.3,
+                        "deadZone": 0.1,
+                        "filter": {
+                            "type": "slew",
+                            "maxAccel": 3,
+                            "maxDecel": 3,
+                            "noSignCross": false
+                        }
+                    }
+                },
+                "rightSideStand": {
+                    "velocity": {
+                        "min": -1.5,
+                        "max": 1.5,
+                        "deadZone": 0.1,
+                        "filter": {
+                            "type": "slew",
+                            "maxAccel": 3,
+                            "maxDecel": 3,
+                            "noSignCross": false
+                        }
+                    },
+                    "lineVelocityX": {
+                        "min": -0.3,
+                        "max": 0.3,
+                        "deadZone": 0.1,
+                        "filter": {
+                            "type": "slew",
+                            "maxAccel": 3,
+                            "maxDecel": 3,
+                            "noSignCross": false
+                        }
+                    },
+                    "lineVelocityY": {
+                        "min": -0.3,
+                        "max": 0.3,
+                        "deadZone": 0.1,
+                        "filter": {
+                            "type": "slew",
+                            "maxAccel": 3,
+                            "maxDecel": 3,
+                            "noSignCross": false
+                        }
                     }
                 }
+            }
+        }
+    },
+    "motionControl": {
+        "models": [],
+        "safeControl": {
+            "safeHintLevel": 1,
+            "minVoltage": 34,
+            "lowVolDuration": 60000,
+            "highTemp": 90,
+            "overheatTemp": 115,
+            "overTempDuration": 5000,
+            "overheatDuration": 2000,
+            "motionStandby": {
+                "enable": true,
+                "standbyTimes": 60000,
+                "powerId": "motionStandby"
+            },
+            "layingAction": "laying",
+            "fallRecoveryAction": "recovery",
+            "stuntCooldownMs": 5000
+        },
+        "action": {
+            "assemble": {
+                "laying": [
+                    "laying",
+                    "disableAction"
+                ],
+                "standing": [
+                    "enableAction",
+                    "standing"
+                ],
+                "walking": [
+                    "enableAction",
+                    "standing",
+                    "walking"
+                ],
+                "waveHand": [
+                    "enableAction",
+                    "standing",
+                    "waveHand",
+                    "walking"
+                ],
+                "bipedStand": [
+                    "enableAction",
+                    "standing",
+                    "walking",
+                    "bipedStand",
+                    "walking"
+                ],
+                "handstand": [
+                    "enableAction",
+                    "standing",
+                    "walking",
+                    "handstand",
+                    "walking"
+                ],
+                "leftSideStand": [
+                    "enableAction",
+                    "standing",
+                    "walking",
+                    "leftSideStand",
+                    "walking"
+                ],
+                "rightSideStand": [
+                    "enableAction",
+                    "standing",
+                    "walking",
+                    "rightSideStand",
+                    "walking"
+                ]
             }
         }
     }
