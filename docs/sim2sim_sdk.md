@@ -60,18 +60,38 @@ Terminal 2:
 ```bash
 cd /path/to/uniubi_robot_mock/simulation
 export PYTHONPATH=$(pwd)
+export LD_LIBRARY_PATH=/uniubi_mock/vendor/usr/lib:$LD_LIBRARY_PATH
 
 python scripts/run_lowlevel_onnx_policy.py \
-  --sdk-python "$ROBOTSDK_PYTHON_PATH" \
-  --model /path/to/policy.onnx \
-  --duration 30 \
-  --rate 50 \
-  --cmd-x 0.5
+  --sdk-python "$ROBOTSDK_PYTHON_PATH"
 ```
 
-The helper builds the same 45-dimensional observation used by the Cyvet velocity policy and sends joint position targets through `MotionLowLevelClient`.
+The robot starts and remains in the laying pose without any LowLevel command.
+The CLI runs the bundled `simulation/models/policy.onnx`. A typical session is:
 
-For on-board deployment, use a TensorRT engine for policy inference. The ONNXRuntime helper above is intended for x86 simulation and SDK integration checks.
+```text
+stand
+walk 0.5 0 0
+state
+stop
+lay
+quit
+```
+
+`stand` smoothly moves from the measured laying pose to standing. `walk` runs
+the fixed 45-input policy at 50 Hz. If the current posture is not standing,
+`walk` first performs the same two-second standing transition automatically.
+`stop` stops policy inference and returns to standing; `lay` smoothly returns
+to the laying pose. `state` reports the SDK state, tracked posture, command, and
+successful/failed control-frame counters; `obs` prints the latest 12 joint
+positions.
+
+The laying and standing transitions use the same per-joint posture gains as the
+mock MotionServer configuration. `quit` sends the LowLevel safety cleanup,
+disables control, and disconnects the client.
+
+This ONNXRuntime CLI is intended only for x86 simulation and LowLevel SDK
+integration checks.
 
 ## Optional DDS Interface Binding
 
@@ -126,8 +146,7 @@ set {"lineVelocityX":-1.0,"lineVelocityY":0,"velocity":0}
 ```
 
 Do not treat an accepted `start walking` RPC as proof that a persistent action
-has already exited. Use `help` for the complete command list. LowLevel ONNX
-testing continues to use `--cmd-x/--cmd-y/--cmd-yaw` and is unaffected.
+has already exited. Use `help` for the complete command list.
 
 ## Troubleshooting
 

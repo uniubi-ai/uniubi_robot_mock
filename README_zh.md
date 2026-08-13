@@ -11,6 +11,7 @@
 | mock 运行包 | `mockService/uniubi_mock/` | 部署到 Linux VM `/uniubi_mock` 的 x86_64 自包含运行环境 |
 | 仿真 bridge | `simulation/sim2sim/` | MuJoCo 后端，与 mock runtime 交换运控控制和机器人状态 |
 | SDK Sim2Sim | `docs/sim2sim_sdk_zh.md` | 通过 MuJoCo 和 DDS topic 验证低级 SDK client |
+| LowLevel 策略 CLI | `simulation/scripts/run_lowlevel_onnx_policy.py` | 使用内置 ONNX 策略交互验证趴下、站立、行走和停止 |
 | DDS 网卡脚本 | `simulation/scripts/setup_dds.sh` | 为当前 shell 绑定 Cyclone DDS 网卡 |
 | mock 服务说明 | `docs/mock_service.md` | 部署、启动、校验和排障 |
 | 仿真环境说明 | `docs/simulation_setup.md` | MuJoCo 环境准备和 bridge 启动 |
@@ -21,7 +22,7 @@
 2. 使用 `sudo` 和 `LD_LIBRARY_PATH=/uniubi_mock/vendor/usr/lib` 依次启动 `robotMonitorServer`、`motionServer`、`robotServer`。
 3. 如果 VM 网卡不在默认列表中，修改 `/uniubi_mock/etc/dds/host_config.xml` 的 host DDS 网卡。
 4. 在 `simulation/` 下设置 `PYTHONPATH=$(pwd)` 并启动仿真 bridge。
-5. 使用 SDK 客户端连接 mock 服务，验证 `standing`、`walking`、`laying` 等高级动作。
+5. 使用 SDK 客户端连接 mock 服务，验证 HighLevel 动作或交互式 LowLevel 策略闭环。
 
 完整命令见 [docs/mock_service.md](docs/mock_service.md)、[docs/simulation_setup.md](docs/simulation_setup.md) 和 [docs/sim2sim_sdk_zh.md](docs/sim2sim_sdk_zh.md)。
 
