@@ -7,6 +7,11 @@ and validation in a simulated environment without a physical robot. The
 simulation uses the same SDK interfaces as real hardware, so validated client
 code can be migrated to a robot with minimal changes.
 
+> **Simulation limitations:** Simulation behavior is not equivalent to
+> real-hardware behavior. The simulator implements only a subset of the
+> capabilities available on a physical robot, so motion performance, supported
+> features, timing, and safety behavior must be validated again on hardware.
+
 ## Installation
 
 1. **Mock services (HighLevel only):** deploy
@@ -47,8 +52,7 @@ Walking velocity parameters.
 
 ## LowLevel
 
-LowLevel does not require the mock services. On x86_64 Linux it communicates
-directly with the MuJoCo bridge over DDS. Use
+LowLevel does not require the mock services. Use
 [run_lowlevel_onnx_policy.py](simulation/scripts/run_lowlevel_onnx_policy.py) to
 validate observations, bundled ONNX inference, and 12-joint PD targets. See
 [LowLevel SDK Validation](docs/sim2sim_sdk.md#lowlevel-sdk-validation) for the

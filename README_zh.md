@@ -6,6 +6,10 @@
 与 LowLevel 运控功能。仿真与真实硬件保持相同的 SDK 接口，验证完成的客户端代码可
 用最小改动快速迁移到真实机器人。
 
+> **仿真限制：**仿真表现不等同于真机表现，且仿真环境只实现了真实机器人能力的
+> 一个子集，支持的功能和动作没有真机丰富。动作效果、时序、安全行为及相关功能均需
+> 在真实硬件上重新验证。
+
 ## 安装
 
 1. **mock 服务（仅 HighLevel）：**按照 [mock 服务说明](docs/mock_service.md)部署
@@ -41,8 +45,7 @@ HighLevel 需要 mock 服务和 MuJoCo bridge。使用
 
 ## LowLevel
 
-LowLevel 不需要 mock 服务。在 x86_64 Linux 上，它通过 DDS 直接与 MuJoCo bridge
-通信。使用
+LowLevel 不需要 mock 服务。使用
 [run_lowlevel_onnx_policy.py](simulation/scripts/run_lowlevel_onnx_policy.py)验证直接
 观测、内置 ONNX 推理和 12 关节 PD 目标。启动及测试步骤见
 [LowLevel SDK 验证](docs/sim2sim_sdk_zh.md#lowlevel-sdk-验证)。
