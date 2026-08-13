@@ -180,7 +180,7 @@ source scripts/setup_dds.sh <iface>
 
 Use `ip -br addr` to identify the interface carrying DDS traffic. HighLevel
 also requires the same interface in the mock runtime host DDS configuration;
-see [Mock Service Development Guide](mock_service.md#host-dds-网卡配置).
+see [Mock Service Development Guide](mock_service.md#host-dds-network-interface-configuration).
 
 ## Troubleshooting
 

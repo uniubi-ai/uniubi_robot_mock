@@ -21,6 +21,9 @@ code can be migrated to a robot with minimal changes.
    Python SDK, and matching SDK native libraries by following the
    [SDK Sim2Sim guide](docs/sim2sim_sdk.md#install).
 
+For a standalone host preparation checklist, see
+[Robot Simulation Environment Setup](docs/simulation_setup.md).
+
 ## HighLevel
 
 HighLevel requires the mock services and MuJoCo bridge. Use
@@ -65,6 +68,8 @@ startup and test procedure.
 - DDS: Cyclone DDS 0.10.5.
 - Simulator bridge: MuJoCo is the only supported simulation backend.
 - The mock runtime is for SDK integration and closed-loop simulation validation. It does not replace real robot safety validation.
+
+See the [Support Matrix](support_matrix.md) for the complete compatibility boundary.
 
 ## License
 

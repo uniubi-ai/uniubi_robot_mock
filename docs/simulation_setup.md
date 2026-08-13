@@ -1,128 +1,124 @@
-# 机器人仿真环境配置
+# Robot Simulation Environment Setup
 
-以下步骤均在 ubuntu 上进行。
+**English** | [简体中文](simulation_setup_zh.md)
 
-## 仿真环境配置推荐
+Perform the following steps on Ubuntu.
 
-| 项目 | 推荐配置 | 说明 |
-| --- | --- | --- |
-| 操作系统 | Ubuntu 22.04 LTS | 其他版本未充分验证 |
-| CPU | x86，≥ 8 核 | MuJoCo 物理计算依赖 CPU 多核 |
-| 内存 | 32 GB | 同时跑 viewer + bridge + 录制时 16 GB 偏紧 |
-| 磁盘 | 20 GB 可用 | conda 环境、MuJoCo 与运行日志 |
-| GPU | 可选 | 无独显时可使用 OSMesa 软件渲染 |
-| Python | 3.11 | 建议使用独立的 `mujoco_env` |
-| 网络 | 仿真机与真机同一网段，千兆有线 | DDS 默认通过多播发现，跨网段需额外配置 |
+## Recommended Simulation Environment
 
-> **备注**：配置过低时，可能出现以下问题：
-> - 仿真画面卡顿、控制周期不稳，physics step 跟不上设定频率
-> - bridge 与真机/控制端 数据丢包严重或通信延迟较大
+| Item | Recommended configuration | Notes |
+|---|---|---|
+| Operating system | Ubuntu 22.04 LTS | Other versions have not been fully validated |
+| CPU | x86, 8 cores or more | MuJoCo physics benefits from multiple CPU cores |
+| Memory | 32 GB | 16 GB can be tight when running the viewer, bridge, and recording together |
+| Disk | 20 GB free | For the Conda environment, MuJoCo, and runtime logs |
+| GPU | Optional | OSMesa software rendering can be used without a discrete GPU |
+| Python | 3.11 | Use a dedicated `mujoco_env` environment |
+| Network | Gigabit wired connection on the same subnet as the robot | DDS uses multicast discovery by default; routing across subnets requires additional configuration |
+
+> **Note:** An undersized system may show a low simulation frame rate, unstable
+> control periods, physics steps that cannot keep up with the configured rate,
+> or significant packet loss and latency between the bridge and the robot or
+> controller.
 >
-> 实测在 i5-7400（4 核 @ 3.0 GHz）+ 16 GB + Intel HD Graphics 630 上运行 mujoco 以及设备服务，CPU 占用吃满，仅能勉强运行。
+> MuJoCo and the device services were barely usable on a tested i5-7400
+> (4 cores at 3.0 GHz), 16 GB of memory, and Intel HD Graphics 630 because CPU
+> utilization remained saturated.
 
-## 1. 系统依赖
+## 1. System Dependencies
 
-以下步骤用于安装 MuJoCo bridge 的系统与 DDS 依赖。
+These steps install the system and DDS dependencies required by the MuJoCo bridge.
 
-### 1.1 安装 miniconda3
+### 1.1 Install Miniconda
+
 ```bash
-# 1. 打开终端并运行以下命令，下载最新版本的 Miniconda：
+# Download the current Miniconda installer.
 curl -O https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh
 
-# 2. 运行以下命令安装 Miniconda，期间权限请求一路通过即可完成：
+# Run the installer and follow its prompts.
 bash ./Miniconda3-latest-Linux-x86_64.sh
 
-# 3. 将conda加入环境变量
+# Activate Conda. Adjust the path if Miniconda was installed elsewhere.
 source /root/miniconda3/bin/activate
-
-# ps：官方流程详情请查阅
-https://www.anaconda.com/docs/getting-started/miniconda/install/linux-install#how-do-i-verify-my-installers-integrity
 ```
 
-### 1.2 编译 cyclonedds c 库
+See the [official Miniconda installation guide](https://www.anaconda.com/docs/getting-started/miniconda/install/linux-install#how-do-i-verify-my-installers-integrity) for installer verification and installation details.
 
-DDS 通信库，当前设备服务采用版本 cyclonedds = 0.10.5，仿真环境需要保证版本一致。
+### 1.2 Build the Cyclone DDS C Library
+
+The device services currently use Cyclone DDS 0.10.5. Use the same version in
+the simulation environment.
 
 ```bash
-# 1. 克隆官方仓库
 git clone https://github.com/eclipse-cyclonedds/cyclonedds.git
 cd cyclonedds
-
-# 2. 切换到与你要安装的 python 版本对应的分支/标签 (0.10.5)
 git checkout 0.10.5
 
-# 3. 创建构建目录
 mkdir build install
 cd build
-
-# 4. 编译并安装到刚才创建的 install 目录 (不污染系统路径)
 cmake .. -DCMAKE_INSTALL_PREFIX=../install -DBUILD_EXAMPLES=OFF
 cmake --build . --target install
 
-# 5. 写入 CYCLONEDDS_HOME 到 ~/.bashrc，后续在 mujoco_env 中安装 cyclonedds python 包时会自动用到
 echo "export CYCLONEDDS_HOME=$(cd ../install && pwd)" >> ~/.bashrc
 source ~/.bashrc
 ```
 
-### 1.3 绑定 DDS 网卡（如遇到启动后设备交互，仿真器无响应情况）
+### 1.3 Bind DDS to a Network Interface
 
-仿真代码依赖 CycloneDDS 默认发现：自动挑第一个 up、非 loopback、支持多播的接口。多网卡环境（公司内网 + 实验台局域网、docker0、虚拟网卡等）下发现顺序不稳定，可能选错网卡导致 bridge 与真机不在同一广播域
+Cyclone DDS normally selects the first active, non-loopback, multicast-capable
+interface. On hosts with multiple interfaces, such as a corporate network,
+test-bench LAN, Docker bridge, or virtual adapter, this selection may be
+unstable and prevent the bridge from reaching the intended DDS domain.
 
-解决方案
-显式把 CycloneDDS 绑定到与真机连通的那张网卡。仓内提供脚本 `simulation/scripts/setup_dds.sh`，会把内联 XML 写到 `CYCLONEDDS_URI` 环境变量里，**仅对当前 shell 生效**，不污染 `~/.bashrc`、也不需要修改仓内文件。
+Use `simulation/scripts/setup_dds.sh` to bind Cyclone DDS in the current shell
+without modifying repository files or `~/.bashrc`:
 
 ```bash
-# 1. 看一眼可选网卡，挑与真机同段的那张（比如 enp3s0）
 ip -br addr
-
-# 2. source 脚本绑定网卡（每开一个新 shell 都要重新 source 一次）
 source simulation/scripts/setup_dds.sh enp3s0
 ```
 
-不传参数时，脚本会自动列出 up、非 loopback 的候选网卡供你参考。
-
-> 如果想要每个新 shell 自动生效，可以在 `~/.bashrc` 末尾加一行（用绝对路径），自行选择是否持久化：
->
-> ```bash
-> source /abs/path/to/simulation/scripts/setup_dds.sh enp3s0
-> ```
-
-## 2. 仿真器安装
-
-当前仅支持 MuJoCo。bridge 使用 CPU 物理计算，并可通过 OSMesa 在无独立显卡的环境中运行。
-
-### 2.1 安装 MuJoCo
-
-**安装**
+Without an argument, the script lists active non-loopback candidates. To apply
+the selection automatically in new shells, add an absolute-path invocation to
+`~/.bashrc` only after confirming the correct interface:
 
 ```bash
-# 系统依赖：OSMesa 软件渲染 + GLX/GLFW（viewer 用）+ patchelf（修 ELF）
+source /abs/path/to/simulation/scripts/setup_dds.sh enp3s0
+```
+
+## 2. Install the Simulator
+
+MuJoCo is the only supported simulator. The bridge uses CPU physics and can use
+OSMesa for headless software rendering.
+
+### 2.1 Install MuJoCo
+
+```bash
 sudo apt-get update
 sudo apt-get install -y libosmesa6-dev libgl1-mesa-glx libglfw3 patchelf
 
-# 创建并激活环境 (可选，但在服务器上强烈推荐)
 conda create -n mujoco_env python=3.11
 conda activate mujoco_env
 
-# 安装官方 MuJoCo 包
 pip install mujoco numpy
-
-# bridge 运行依赖（依赖 §1.2 装的 cyclonedds c 库-已在1.2 完成前置官方资源部署）
 pip install cyclonedds==0.10.5 pyyaml
 ```
 
+The Cyclone DDS Python package uses the C library installed in section 1.2.
 
-**启动**
+Start the MuJoCo bridge from the repository root:
 
 ```bash
-# 进入仿真代码根目录
 cd simulation
-# 配置环境变量
 export PYTHONPATH=$(pwd)
-# 启动mujoco仿真器
-PYTHONUNBUFFERED=1 python sim2sim/robot2simulator/run_bridge.py --config sim2sim/configs/uniubi_cyvet.yaml --print-ctrl --print-ctrl-hz 10 --viewer
+PYTHONUNBUFFERED=1 python sim2sim/robot2simulator/run_bridge.py \
+  --config sim2sim/configs/uniubi_cyvet.yaml \
+  --print-ctrl --print-ctrl-hz 10 --viewer
 ```
 
-## 3. 注意事项
+## 3. Configuration Notes
 
-- 仿真代码中配置都是硬编码默认值。**调整任何一项都要同步改设备服务**，两边对齐后再发版，请谨慎修改。
+The simulation contains default configuration values that must remain
+compatible with the service-side contract. When changing a shared DDS,
+observation, control, or model setting, verify both sides together before
+publishing the change.
