@@ -1,18 +1,18 @@
 # Mock Service 开发指南
 
-这个包是一个自包含的 x86_64 Linux VM mock 运行环境。所有运行时文件都应部署在：
+这个包是一个自包含的 x86_64 Linux mock 运行环境，可直接运行在物理机上，也可按需运行在虚拟机中。所有运行时文件都应部署在：
 
 ```text
 /uniubi_mock
 ```
 
-请将该包部署到 `/uniubi_mock` 下，避免污染 VM 全局的 `/vendor`、`/etc`、`/product` 和 `/data` 目录。
+请将该包部署到 `/uniubi_mock` 下，避免污染主机全局的 `/vendor`、`/etc`、`/product` 和 `/data` 目录。
 
 ## 仓库结构
 
 ```text
 mockService/
-└── uniubi_mock/                 # 部署到 VM /uniubi_mock 的内容
+└── uniubi_mock/                 # 部署到目标主机 /uniubi_mock 的内容
     ├── vendor/x86_64/usr/bin/   # x86_64 可执行文件
     ├── vendor/x86_64/usr/lib/   # x86_64 动态库
     ├── etc/uos/                 # 服务配置，已使用 /uniubi_mock 路径
@@ -23,7 +23,7 @@ mockService/
     └── data/                    # 运行时数据根目录
 ```
 
-部署完成后，VM 上的目录结构应为：
+部署完成后，目标主机上的目录结构应为：
 
 ```text
 /uniubi_mock/
@@ -39,7 +39,7 @@ mockService/
     └── logger/log/
 ```
 
-## 部署到 VM
+## 部署到 x86_64 Linux 主机
 
 ```bash
 export SIM_ROOT=/path/to/mockService/uniubi_mock
@@ -146,15 +146,15 @@ Host 侧发现和 RobotServer RPC 使用 CycloneDDS host domain，配置文件�
 /uniubi_mock/etc/uos/robot_simulate_proxy
 ```
 
-`robotServerCapacity.simulateProxy.interface` 控制 host domain 延迟绑定的网卡候选列表；mock 包默认包含 `enp1s0`、`eth0`、`wlan0`，需要至少有一个网卡在 VM 中存在且已获取 IPv4 地址。`robot_simulate_proxy` 内部的 DDS XML 路径必须保持为 `/uniubi_mock/etc/dds/host_config.xml`。
+`robotServerCapacity.simulateProxy.interface` 控制 host domain 延迟绑定的网卡候选列表；mock 包默认包含 `enp1s0`、`eth0`、`wlan0`，需要至少有一个网卡在目标主机中存在且已获取 IPv4 地址。`robot_simulate_proxy` 内部的 DDS XML 路径必须保持为 `/uniubi_mock/etc/dds/host_config.xml`。
 
-这个文件通过 `NetworkInterface name="..."` 依赖 VM 实际网卡名。第一次在新 VM 上启动服务前，先检查网卡名：
+这个文件通过 `NetworkInterface name="..."` 依赖目标主机的实际网卡名。第一次在新主机上启动服务前，先检查网卡名：
 
 ```bash
 ip -br addr
 ```
 
-如果 VM 使用的网卡名没有出现在 `host_config.xml` 中，只修改或新增对应的 `<NetworkInterface name="...">` 条目即可。常见 VM 网卡名包括 `enp1s0`、`ens33` 和 `eth0`。
+如果目标主机使用的网卡名没有出现在 `host_config.xml` 中，只修改或新增对应的 `<NetworkInterface name="...">` 条目即可。常见 Linux 网卡名包括 `enp1s0`、`ens33`、`eth0` 和 `wlan0`。
 
 除了这个 host DDS 网卡名适配项以外，不建议随意修改包内 UOS、DDS 或 product 配置。其他配置值与服务 domain、运行时路径、RPC/event topic 和 mock 产品能力绑定。
 
@@ -185,7 +185,7 @@ DDS domain：
 
 ## 校验命令
 
-部署完成后，在目标 VM 上执行：
+部署完成后，在目标主机上执行：
 
 ```bash
 export MOCK_ROOT=/uniubi_mock
@@ -214,9 +214,9 @@ grep -n 'NetworkInterface' $MOCK_ROOT/etc/dds/host_config.xml
 - 确认 `robotServer` 使用 `$MOCK_ROOT/etc/uos/robotServer` 启动。
 - 确认 `robot_simulate_proxy` EventBus 配置了 `withService=true` 和 `withClient=true`。
 - 确认 host client 和 `robotServer` 都使用 host domain `42`。
-- 确认 `host_config.xml` 包含 VM 用于 host 侧发现的网卡名。
-- 确认 `robotServerCapacity.simulateProxy.ddsConfig` 指向 `/uniubi_mock/etc/uos/robot_simulate_proxy`，且 `simulateProxy.interface` 包含 VM 实际联调网卡。
-- 确认 VM 网络允许 multicast。
+- 确认 `host_config.xml` 包含主机用于 host 侧发现的网卡名。
+- 确认 `robotServerCapacity.simulateProxy.ddsConfig` 指向 `/uniubi_mock/etc/uos/robot_simulate_proxy`，且 `simulateProxy.interface` 包含主机实际联调网卡。
+- 确认主机网络允许 multicast。
 
 如果 `robotServer` 无法访问 `motionServer`：
 
@@ -237,7 +237,7 @@ sudo rm -f /tmp/memoryConfig
 
 ## 清理
 
-如需从 VM 移除 mock 环境：
+如需从目标主机移除 mock 环境：
 
 ```bash
 sudo pkill -TERM -f '^/uniubi_mock/vendor/usr/bin/robotMonitorServer( |$)' || true
@@ -251,4 +251,4 @@ sudo pkill -KILL -f '^/uniubi_mock/vendor/usr/bin/motionServer( |$)' || true
 sudo rm -rf /uniubi_mock
 ```
 
-清理命令只会删除 mock 运行时根目录 `/uniubi_mock`；VM 全局的 `/vendor`、`/etc`、`/product` 和 `/data` 目录不属于这个包。
+清理命令只会删除 mock 运行时根目录 `/uniubi_mock`；主机全局的 `/vendor`、`/etc`、`/product` 和 `/data` 目录不属于这个包。
