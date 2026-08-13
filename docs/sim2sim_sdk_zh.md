@@ -37,7 +37,6 @@ export PYTHONPATH=$(pwd)
 
 python -m sim2sim.robot2simulator.run_bridge \
   --config sim2sim/configs/uniubi_cyvet.yaml \
-  --backend mujoco \
   --viewer
 ```
 
@@ -46,11 +45,9 @@ python -m sim2sim.robot2simulator.run_bridge \
 ```bash
 cd /path/to/uniubi_robot_mock/simulation
 export PYTHONPATH=$(pwd)
-export MUJOCO_GL=osmesa
 
 python -m sim2sim.robot2simulator.run_bridge \
   --config sim2sim/configs/uniubi_cyvet.yaml \
-  --backend mujoco \
   --headless
 ```
 
@@ -87,34 +84,47 @@ source scripts/setup_dds.sh <iface>
 
 用 `ip -br addr` 查看网卡，选择承载 DDS 流量的那一张。
 
-## 可选：虚拟遥控
+## HighLevel 交互控制台
 
-ONNX helper 默认使用 `--cmd-x/--cmd-y/--cmd-yaw` 作为控制指令，这是低级控制仿真的常规路径。如果希望用虚拟遥控来给速度指令，也可以读取 `rt/motion/trc`：
+HighLevel mock 与公开 Python SDK 使用相同的命令式控制台，不再模拟遥控器组合键。先安装当前 Python SDK，并启动 MuJoCo bridge，然后运行：
 
 ```bash
 cd /path/to/uniubi_robot_mock/simulation
 export PYTHONPATH=$(pwd)
 
-python scripts/publish_trc_keyboard.py \
-  --domain 42 \
-  --topic rt/motion/trc \
-  --rate 50
+python scripts/highlevel_console.py --iface <网卡名>
 ```
 
-本地仿真默认使用 action id `1`。如需调整，可以传入 `--controller <id>`。
+运行服务的 x86 主机本身就是 mock 设备，不需要发现或选择设备。
 
-按键：
+进入 `highlevel>` 后可按以下方式验证 Walking：
 
-- `w/s`：前进/后退
-- `a/d`：横移
-- `q/e`：转向
-- `space` 或 `x`：归零
-- `1`：handstand（`LB+A`）
-- `2`：standing（`Back`）
-- `3`：walking（`Start+Y`）
-- `4`：laying（`Start+A`）
-- `5`：waveBody（`LB+Start`）
-- `z`：emergencyStop（`LB+RB`）
+```text
+start walking
+set {"lineVelocityX":0.5,"lineVelocityY":0,"velocity":0}
+zero
+set {"lineVelocityX":-1.0,"lineVelocityY":0,"velocity":0}
+zero
+state
+```
+
+`set` 会持续保持指令，`send 3 {...}` 会保持 3 秒后自动清零；`zero` 只清除
+当前动作参数，不会结束动作。`start` 成功表示切换请求已被服务接受，实际执行动作
+应通过 `state` 确认。
+
+`bipedStand`、`handstand`、`leftSideStand`、`rightSideStand` 是持续动作。从这些
+动作回到 Walking 时，先执行 `stop`，等待 `state` 返回 `walking`，再发送 Walking
+速度参数：
+
+```text
+start bipedStand
+stop
+state
+set {"lineVelocityX":-1.0,"lineVelocityY":0,"velocity":0}
+```
+
+不要把 `start walking` 的 RPC 成功响应当作持续动作已经退出。输入 `help` 可查看
+完整命令。LowLevel ONNX 测试仍使用 `--cmd-x/--cmd-y/--cmd-yaw`，不受影响。
 
 ## 常见问题
 
@@ -125,3 +135,7 @@ python scripts/publish_trc_keyboard.py \
 - control: `rt/motion/control`
 - observed: `rt/motion/observed`
 - TRC: `rt/motion/trc`
+
+三个 mock 服务需要按 `docs/mock_service.md` 使用 `sudo` 启动，否则 MotionServer
+可能因缺少实时调度权限而无法创建控制线程。建议先启动三个服务，确认 ready 后再
+启动 MuJoCo bridge。

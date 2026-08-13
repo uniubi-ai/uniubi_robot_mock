@@ -37,7 +37,6 @@ export PYTHONPATH=$(pwd)
 
 python -m sim2sim.robot2simulator.run_bridge \
   --config sim2sim/configs/uniubi_cyvet.yaml \
-  --backend mujoco \
   --viewer
 ```
 
@@ -46,11 +45,9 @@ For headless machines:
 ```bash
 cd /path/to/uniubi_robot_mock/simulation
 export PYTHONPATH=$(pwd)
-export MUJOCO_GL=osmesa
 
 python -m sim2sim.robot2simulator.run_bridge \
   --config sim2sim/configs/uniubi_cyvet.yaml \
-  --backend mujoco \
   --headless
 ```
 
@@ -87,34 +84,50 @@ source scripts/setup_dds.sh <iface>
 
 Use `ip -br addr` to find the interface that should carry DDS traffic.
 
-## Optional Virtual Remote Control
+## HighLevel Interactive Console
 
-The ONNX helper uses `--cmd-x/--cmd-y/--cmd-yaw` by default. This is the normal path for low-level simulation. It can also read `rt/motion/trc` frames if you want to drive the command with a virtual remote control:
+HighLevel mock control uses the same command-oriented console as the public Python SDK. It does not emulate remote-control key combinations. Install the current Python SDK first, start the MuJoCo bridge, then run:
 
 ```bash
 cd /path/to/uniubi_robot_mock/simulation
 export PYTHONPATH=$(pwd)
 
-python scripts/publish_trc_keyboard.py \
-  --domain 42 \
-  --topic rt/motion/trc \
-  --rate 50
+python scripts/highlevel_console.py --iface <iface>
 ```
 
-The local simulation uses action id `1` by default. You can override it with `--controller <id>` if needed.
+The x86 host running the runtime is the mock device; no discovery or device
+selection is required.
 
-Keyboard mapping:
+Use the following sequence to validate Walking:
 
-- `w/s`: forward/backward
-- `a/d`: lateral
-- `q/e`: yaw
-- `space` or `x`: zero axes and buttons
-- `1`: handstand (`LB+A`)
-- `2`: standing (`Back`)
-- `3`: walking (`Start+Y`)
-- `4`: laying (`Start+A`)
-- `5`: waveBody (`LB+Start`)
-- `z`: emergencyStop (`LB+RB`)
+```text
+start walking
+set {"lineVelocityX":0.5,"lineVelocityY":0,"velocity":0}
+zero
+set {"lineVelocityX":-1.0,"lineVelocityY":0,"velocity":0}
+zero
+state
+```
+
+`set` keeps a command active, while `send 3 {...}` clears it automatically
+after three seconds. `zero` clears the current parameters without stopping the
+action. A successful `start` response means that the switch request was
+accepted; use `state` to confirm the action that is actually executing.
+
+`bipedStand`, `handstand`, `leftSideStand`, and `rightSideStand` are persistent
+actions. To return from one of them to Walking, call `stop`, wait until `state`
+reports `walking`, and only then send Walking velocity parameters:
+
+```text
+start bipedStand
+stop
+state
+set {"lineVelocityX":-1.0,"lineVelocityY":0,"velocity":0}
+```
+
+Do not treat an accepted `start walking` RPC as proof that a persistent action
+has already exited. Use `help` for the complete command list. LowLevel ONNX
+testing continues to use `--cmd-x/--cmd-y/--cmd-yaw` and is unaffected.
 
 ## Troubleshooting
 
@@ -125,3 +138,8 @@ If DDS topics do not match, keep the defaults on both sides:
 - control: `rt/motion/control`
 - observed: `rt/motion/observed`
 - TRC: `rt/motion/trc`
+
+Start all three mock services with `sudo` as described in
+`docs/mock_service.md`. Without real-time scheduling permission, MotionServer
+may fail to create its control thread. Start the MuJoCo bridge after the three
+services are ready.

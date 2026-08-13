@@ -8,9 +8,9 @@
 | DDS | Cyclone DDS 0.10.5 |
 | Host DDS domain | 42 |
 | Motion DDS domain | 1 |
-| Simulator backends | MuJoCo, Isaac Gym |
+| Simulator backend | MuJoCo |
 | Default validation backend | MuJoCo |
 | MuJoCo Python | Python 3.11 environment |
-| Isaac Gym Python | Python 3.8 environment |
-| Supported actions | `laying`, `standing`, `walking`, `emergencyStop`, `jumpFrontflip`, `jumpSideflip`, `jumpBackflip` |
+| Supported actions | `laying`, `standing`, `walking`, `emergencyStop`, `waveHand`, `bipedStand`, `handstand`, `leftSideStand`, `rightSideStand` |
+| Internal safety action | `recovery` (automatically scheduled after fall detection) |
 | Non-goals | Real robot safety validation, RL training, high-fidelity production physics replacement |

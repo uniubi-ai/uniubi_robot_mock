@@ -9,9 +9,9 @@
 | 操作系统 | Ubuntu 22.04 LTS | 其他版本未充分验证 |
 | CPU | x86，≥ 8 核 | MuJoCo 物理计算依赖 CPU 多核 |
 | 内存 | 32 GB | 同时跑 viewer + bridge + 录制时 16 GB 偏紧 |
-| 磁盘 | 50 GB 可用 | conda 环境 + isaacgym 资源占用较大 |
-| GPU | NVIDIA GPU + CUDA 11.x | 仅 mujoco 后端时可无独显，使用 OSMesa 软件渲染；isaacgym 必须 NVIDIA GPU |
-| Python | mujoco_env 用 3.11；gym_env 用 3.8 | 两个环境独立，按后端切换 |
+| 磁盘 | 20 GB 可用 | conda 环境、MuJoCo 与运行日志 |
+| GPU | 可选 | 无独显时可使用 OSMesa 软件渲染 |
+| Python | 3.11 | 建议使用独立的 `mujoco_env` |
 | 网络 | 仿真机与真机同一网段，千兆有线 | DDS 默认通过多播发现，跨网段需额外配置 |
 
 > **备注**：配置过低时，可能出现以下问题：
@@ -22,7 +22,7 @@
 
 ## 1. 系统依赖
 
-无论使用哪种仿真后端，以下步骤都需要先完成。
+以下步骤用于安装 MuJoCo bridge 的系统与 DDS 依赖。
 
 ### 1.1 安装 miniconda3
 ```bash
@@ -59,7 +59,7 @@ cd build
 cmake .. -DCMAKE_INSTALL_PREFIX=../install -DBUILD_EXAMPLES=OFF
 cmake --build . --target install
 
-# 5. 写入 CYCLONEDDS_HOME 到 ~/.bashrc，后续在 mujoco_env / gym_env 中安装 cyclonedds python 包时会自动用到
+# 5. 写入 CYCLONEDDS_HOME 到 ~/.bashrc，后续在 mujoco_env 中安装 cyclonedds python 包时会自动用到
 echo "export CYCLONEDDS_HOME=$(cd ../install && pwd)" >> ~/.bashrc
 source ~/.bashrc
 ```
@@ -89,16 +89,9 @@ source simulation/scripts/setup_dds.sh enp3s0
 
 ## 2. 仿真器安装
 
-当前支持两种仿真方式，按实际场景选择：
+当前仅支持 MuJoCo。bridge 使用 CPU 物理计算，并可通过 OSMesa 在无独立显卡的环境中运行。
 
-| 后端 | 对应 conda env | 关键区别 |
-| --- | --- | --- |
-| **mujoco**  | `mujoco_env`（Python 3.11） | CPU 物理 + OSMesa 软渲染，**无独显也能跑**；物理稳定、依赖轻，作为通用验证默认 |
-| **isaacgym**  | `gym_env`（Python 3.8） | GPU 物理 + 渲染，**必须 NVIDIA GPU**；动作执行更贴近训练时的物理分布 |
-
-> **本次发布的功能均在 mujoco 后端上完成测试**，推荐优先使用 mujoco 
-
-### 2.1 方式一：mujoco
+### 2.1 安装 MuJoCo
 
 **安装**
 
@@ -114,10 +107,6 @@ conda activate mujoco_env
 # 安装官方 MuJoCo 包
 pip install mujoco numpy
 
-# 配置环境变量，使用CPU
-echo 'export MUJOCO_GL=osmesa' >> ~/.bashrc
-source ~/.bashrc
-
 # bridge 运行依赖（依赖 §1.2 装的 cyclonedds c 库-已在1.2 完成前置官方资源部署）
 pip install cyclonedds==0.10.5 pyyaml
 ```
@@ -131,38 +120,7 @@ cd simulation
 # 配置环境变量
 export PYTHONPATH=$(pwd)
 # 启动mujoco仿真器
-PYTHONUNBUFFERED=1 python sim2sim/robot2simulator/run_bridge.py --config sim2sim/configs/uniubi_cyvet.yaml --print-ctrl --print-ctrl-hz 10 --viewer --backend mujoco
-```
-
-### 2.2 方式二：isaacgym
-
-- 下载安装包：https://developer.nvidia.com/isaac-gym/download
-
-**安装**
-
-```bash
-# 创建并激活环境 (可选，但在服务器上强烈推荐)
-conda create -n gym_env python=3.8
-conda activate gym_env
-
-# 安装 isaacgym（先 cd 到下载解压后的 isaacgym 目录，例如 IsaacGym_Preview_4_Package/isaacgym）
-cd python
-pip install -e .
-
-# bridge 运行依赖（依赖 §1.2 装的 cyclonedds c 库-已在1.2 完成前置官方资源部署）
-pip install cyclonedds==0.10.5 pyyaml
-```
-
-
-**启动**
-
-```bash
-# 进入仿真代码根目录
-cd simulation
-# 配置环境变量
-export PYTHONPATH=$(pwd)
-# 启动isaacgym仿真器
-PYTHONUNBUFFERED=1 python sim2sim/robot2simulator/run_bridge.py --config sim2sim/configs/uniubi_cyvet.yaml --print-ctrl --print-ctrl-hz 10 --viewer --backend isaacgym
+PYTHONUNBUFFERED=1 python sim2sim/robot2simulator/run_bridge.py --config sim2sim/configs/uniubi_cyvet.yaml --print-ctrl --print-ctrl-hz 10 --viewer
 ```
 
 ## 3. 注意事项

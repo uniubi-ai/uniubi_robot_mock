@@ -46,19 +46,6 @@ def _get_control_hz(raw: Dict[str, Any], sim_dt: float) -> float:
     return 50.0
 
 
-def _select_backend(raw: Dict[str, Any], arg_backend: str) -> str:
-    if arg_backend != "auto":
-        return arg_backend
-    key = raw.get("backend", raw.get("simulator", None))
-    if key is not None:
-        return str(key).strip().lower()
-    if "xml_path" in raw:
-        return "mujoco"
-    if "urdf_path" in raw:
-        return "isaacgym"
-    raise RuntimeError("无法从 config 推断 backend：请在 yaml 里加 `backend: mujoco|isaacgym`")
-
-
 def _make_transport(dds: DdsConfig, *, actuator_names: tuple[str, ...], dds_debug: bool) -> CycloneDdsTransport:
     headers = tuple(headers_for_actuator_names(actuator_names))
 
@@ -160,75 +147,10 @@ def _make_backend_mujoco(
     return MujocoBackend(cfg)
 
 
-def _make_backend_isaacgym(
-    raw: Dict[str, Any],
-    *,
-    args: argparse.Namespace,
-    actuator_names: tuple[str, ...],
-    config_dir: Path,
-):
-    from sim2sim.robot2simulator.backends.isaacgym_backend import IsaacGymBackend, IsaacGymBackendConfig
-
-    urdf_path = _resolve_path(str(raw["urdf_path"]), config_dir=config_dir)
-    sim_dt = _get_sim_dt(raw)
-    publish_hz = _get_publish_hz(raw, sim_dt=sim_dt)
-    control_hz = _get_control_hz(raw, sim_dt=sim_dt)
-
-    control_cfg = raw.get("control", {}) or {}
-    stiffness_arr = np.asarray(control_cfg.get("stiffness", []), dtype=np.float32)
-    damping_arr = np.asarray(control_cfg.get("damping", []), dtype=np.float32)
-    stiffness = None if stiffness_arr.size == 0 else stiffness_arr
-    damping = None if damping_arr.size == 0 else damping_arr
-    torque_limits_arr = np.asarray(raw.get("torque_limits", []), dtype=np.float32)
-    torque_limits = None if torque_limits_arr.size == 0 else torque_limits_arr
-
-    init_joint_pos = raw.get("initial_joint_pos", None)
-    if init_joint_pos is None:
-        init_joint_pos = raw.get("init_angles", None)
-    init_joint_pos = None if init_joint_pos is None else np.asarray(init_joint_pos, dtype=np.float32)
-
-    base_pos = raw.get("initial_base_pos_xyz", None)
-    base_pos = None if base_pos is None else np.asarray(base_pos, dtype=np.float32)
-
-    gym_cfg = raw.get("isaacgym", {}) or {}
-    dof_names = raw.get("dof_names", None)
-    if dof_names is None:
-        dof_names = gym_cfg.get("dof_names", None)
-    settling_steps = raw.get("settling_steps", None)
-    if settling_steps is None:
-        settling_steps = gym_cfg.get("settling_steps", 50)
-
-    cfg = IsaacGymBackendConfig(
-        urdf_path=str(Path(urdf_path).expanduser()),
-        sim_dt=sim_dt,
-        publish_hz=publish_hz,
-        control_hz=control_hz,
-        realtime=bool(raw.get("realtime", True)),
-        headless=bool(args.headless or raw.get("headless", False)),
-        actuator_names=actuator_names,
-        dof_names=None if dof_names is None else tuple(str(x) for x in dof_names),
-        initial_joint_pos=init_joint_pos,
-        initial_base_pos_xyz=base_pos,
-        settling_steps=int(settling_steps),
-        stiffness=stiffness,
-        damping=damping,
-        torque_limits=torque_limits,
-        use_gpu=bool(gym_cfg.get("use_gpu", True)),
-        use_gpu_pipeline=bool(gym_cfg.get("use_gpu_pipeline", True)),
-        device_id=int(gym_cfg.get("device_id", 0)),
-        physics_engine=str(gym_cfg.get("physics_engine", "physx")),
-        num_substeps=int(gym_cfg.get("num_substeps", 2)),
-        viewer_width=int(gym_cfg.get("viewer_width", 1280)),
-        viewer_height=int(gym_cfg.get("viewer_height", 720)),
-    )
-    return IsaacGymBackend(cfg)
-
-
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--config", required=True, help="yaml path, for example sim2sim/configs/uniubi_cyvet.yaml")
-    parser.add_argument("--backend", choices=("auto", "mujoco", "isaacgym"), default="auto")
-    parser.add_argument("--viewer", action="store_true", help="打开仿真器 viewer（若后端支持）")
+    parser.add_argument("--viewer", action="store_true", help="open the MuJoCo viewer")
     parser.add_argument("--headless", action="store_true", help="强制 headless")
     parser.add_argument(
         "--viewer-sync-every-n-steps",
@@ -285,19 +207,10 @@ def main() -> int:
     dds = DdsConfig()
     print(f"DDS Config: {dds}")
 
-    backend_name = _select_backend(raw, args.backend)
     actuator_names = tuple(raw.get("actuator_names", DEFAULT_ACTUATOR_NAMES))
-
-    if backend_name == "mujoco":
-        backend = _make_backend_mujoco(raw, args=args, actuator_names=actuator_names, config_dir=config_path.parent)
-        publish_hz = float(getattr(backend, "publish_hz"))
-        control_hz = float(getattr(backend, "control_hz"))
-    elif backend_name == "isaacgym":
-        backend = _make_backend_isaacgym(raw, args=args, actuator_names=actuator_names, config_dir=config_path.parent)
-        publish_hz = float(getattr(backend, "publish_hz"))
-        control_hz = float(getattr(backend, "control_hz"))
-    else:
-        raise RuntimeError(f"未知 backend: {backend_name}")
+    backend = _make_backend_mujoco(raw, args=args, actuator_names=actuator_names, config_dir=config_path.parent)
+    publish_hz = float(getattr(backend, "publish_hz"))
+    control_hz = float(getattr(backend, "control_hz"))
 
     transport = _make_transport(dds, actuator_names=actuator_names, dds_debug=bool(args.dds_debug))
 
