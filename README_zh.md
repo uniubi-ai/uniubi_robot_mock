@@ -8,23 +8,30 @@
 
 | 内容 | 路径 | 说明 |
 |---|---|---|
-| mock 运行包 | `mockService/uniubi_mock/` | 部署到 Linux VM `/uniubi_mock` 的 x86_64 自包含运行环境 |
-| 仿真 bridge | `simulation/sim2sim/` | MuJoCo 后端，与 mock runtime 交换运控控制和机器人状态 |
-| SDK Sim2Sim | `docs/sim2sim_sdk_zh.md` | 通过 MuJoCo 和 DDS topic 验证低级 SDK client |
-| LowLevel 策略 CLI | `simulation/scripts/run_lowlevel_onnx_policy.py` | 使用内置 ONNX 策略交互验证趴下、站立、行走和停止 |
-| DDS 网卡脚本 | `simulation/scripts/setup_dds.sh` | 为当前 shell 绑定 Cyclone DDS 网卡 |
-| mock 服务说明 | `docs/mock_service.md` | 部署、启动、校验和排障 |
-| 仿真环境说明 | `docs/simulation_setup.md` | MuJoCo 环境准备和 bridge 启动 |
+| mock 运行包 | [mockService/uniubi_mock/](mockService/uniubi_mock/) | 部署到 x86_64 Linux 主机 `/uniubi_mock` 的自包含运行环境 |
+| 仿真 bridge | [simulation/sim2sim/](simulation/sim2sim/) | MuJoCo 后端，与 mock runtime 交换运控控制和机器人状态 |
+| DDS 网卡脚本 | [simulation/scripts/setup_dds.sh](simulation/scripts/setup_dds.sh) | 为当前 shell 绑定 Cyclone DDS 网卡 |
+| mock 服务说明 | [docs/mock_service.md](docs/mock_service.md) | 部署、启动、校验和排障 |
+| 仿真环境说明 | [docs/simulation_setup.md](docs/simulation_setup.md) | MuJoCo 环境准备和 bridge 启动 |
+
+## SDK 验证入口
+
+| 接口 | 入口 | 验证内容 |
+|---|---|---|
+| HighLevel | [simulation/scripts/highlevel_console.py](simulation/scripts/highlevel_console.py) | 已配置动作的调度和动作参数 |
+| LowLevel | [simulation/scripts/run_lowlevel_onnx_policy.py](simulation/scripts/run_lowlevel_onnx_policy.py) | 直接观测、ONNX 推理和关节 PD 目标 |
+
+HighLevel 和 LowLevel 的独立操作流程见 [SDK Sim2Sim 指南](docs/sim2sim_sdk_zh.md)。
 
 ## 最小闭环
 
-1. 将 `mockService/uniubi_mock/` 部署到 x86_64 Ubuntu VM 的 `/uniubi_mock`。
+1. 将 [mockService/uniubi_mock/](mockService/uniubi_mock/) 部署到 x86_64 Linux 主机的 `/uniubi_mock`。
 2. 使用 `sudo` 和 `LD_LIBRARY_PATH=/uniubi_mock/vendor/usr/lib` 依次启动 `robotMonitorServer`、`motionServer`、`robotServer`。
-3. 如果 VM 网卡不在默认列表中，修改 `/uniubi_mock/etc/dds/host_config.xml` 的 host DDS 网卡。
+3. 如果主机网卡不在默认列表中，修改 `/uniubi_mock/etc/dds/host_config.xml` 的 host DDS 网卡。
 4. 在 `simulation/` 下设置 `PYTHONPATH=$(pwd)` 并启动仿真 bridge。
 5. 使用 SDK 客户端连接 mock 服务，验证 HighLevel 动作或交互式 LowLevel 策略闭环。
 
-完整命令见 [docs/mock_service.md](docs/mock_service.md)、[docs/simulation_setup.md](docs/simulation_setup.md) 和 [docs/sim2sim_sdk_zh.md](docs/sim2sim_sdk_zh.md)。
+完整命令见上方链接的各项指南。
 
 ## 支持动作
 
