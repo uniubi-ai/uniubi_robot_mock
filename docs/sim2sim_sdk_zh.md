@@ -19,7 +19,7 @@
 ### 1. mock 服务（仅 HighLevel）
 
 HighLevel 需要 RobotService mock 运行环境。按照
-[Mock Service 开发指南](mock_service.md) 将 `mockService/uniubi_mock/` 部署到
+[Mock Service 开发指南](mock_service_zh.md) 将 `mockService/uniubi_mock/` 部署到
 `/uniubi_mock`。
 
 **LowLevel 跳过这一步。** x86 LowLevel SDK 直接与 MuJoCo bridge 通信，不使用任何
@@ -124,7 +124,7 @@ MotionLowLevelClient（external simulation backend）
 
 ### 1. 启动 mock 服务
 
-完成安装第 1 步后，按照 [Mock Service 开发指南](mock_service.md) 启动
+完成安装第 1 步后，按照 [Mock Service 开发指南](mock_service_zh.md) 启动
 `robotMonitorServer`、`motionServer` 和 `robotServer`。MotionServer 会创建实时
 控制线程，因此三个服务均需使用 `sudo` 启动。
 
@@ -174,7 +174,7 @@ source scripts/setup_dds.sh <网卡名>
 
 使用 `ip -br addr` 查找承载 DDS 流量的网卡。HighLevel 还需在 mock 运行包的 host
 DDS 配置中使用同一网卡，详见
-[Mock Service 开发指南](mock_service.md#host-dds-网卡配置)。
+[Mock Service 开发指南](mock_service_zh.md#host-dds-网卡配置)。
 
 ## 常见问题
 

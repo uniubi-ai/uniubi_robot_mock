@@ -12,10 +12,12 @@
 
 ## 安装
 
-1. **mock 服务（仅 HighLevel）：**按照 [mock 服务说明](docs/mock_service.md)部署
+1. **mock 服务（仅 HighLevel）：**按照 [mock 服务说明](docs/mock_service_zh.md)部署
    [mockService/uniubi_mock/](mockService/uniubi_mock/)。LowLevel 跳过这一步。
 2. **公共环境：**按照 [SDK Sim2Sim 指南](docs/sim2sim_sdk_zh.md#安装)安装 MuJoCo
    仿真依赖、公开 Python SDK 和同版本 SDK 动态库。
+
+独立主机的环境准备清单见[机器人仿真环境配置](docs/simulation_setup_zh.md)。
 
 ## HighLevel
 
@@ -57,6 +59,8 @@ LowLevel 不需要 mock 服务。使用
 - DDS：Cyclone DDS 0.10.5。
 - 仿真 bridge：MuJoCo 是唯一支持的仿真后端。
 - 本仓用于 SDK 集成和仿真闭环验证，不替代真机安全验证。
+
+完整兼容性边界见[支持矩阵](support_matrix_zh.md)。
 
 ## 许可证
 

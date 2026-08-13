@@ -1,29 +1,34 @@
-# Mock Service 开发指南
+# Mock Service Development Guide
 
-这个包是一个自包含的 x86_64 Linux mock 运行环境，可直接运行在物理机上，也可按需运行在虚拟机中。所有运行时文件都应部署在：
+**English** | [简体中文](mock_service_zh.md)
+
+This package is a self-contained x86_64 Linux mock runtime. It can run directly
+on a physical host or, when needed, in a virtual machine. Deploy all runtime
+files under:
 
 ```text
 /uniubi_mock
 ```
 
-请将该包部署到 `/uniubi_mock` 下，避免污染主机全局的 `/vendor`、`/etc`、`/product` 和 `/data` 目录。
+Do not copy the package into the host's global `/vendor`, `/etc`, `/product`, or
+`/data` directories.
 
-## 仓库结构
+## Repository Layout
 
 ```text
 mockService/
-└── uniubi_mock/                 # 部署到目标主机 /uniubi_mock 的内容
-    ├── vendor/x86_64/usr/bin/   # x86_64 可执行文件
-    ├── vendor/x86_64/usr/lib/   # x86_64 动态库
-    ├── etc/uos/                 # 服务配置，已使用 /uniubi_mock 路径
-    │   └── robot_simulate_proxy  # 仿真 host DDS reader/writer 配置
-    ├── etc/dds/                 # CycloneDDS 配置
-    ├── product/mock/            # mock 产品配置
-    ├── product/model/motion/    # 运控加密模型
-    └── data/                    # 运行时数据根目录
+└── uniubi_mock/                  # Deploy this directory as /uniubi_mock
+    ├── vendor/x86_64/usr/bin/    # x86_64 executables
+    ├── vendor/x86_64/usr/lib/    # x86_64 shared libraries
+    ├── etc/uos/                  # Service configuration using /uniubi_mock paths
+    │   └── robot_simulate_proxy  # Simulation host DDS reader/writer configuration
+    ├── etc/dds/                  # Cyclone DDS configuration
+    ├── product/mock/             # Mock product configuration
+    ├── product/model/motion/     # Encrypted motion models
+    └── data/                     # Runtime data root
 ```
 
-部署完成后，目标主机上的目录结构应为：
+The deployed host layout is:
 
 ```text
 /uniubi_mock/
@@ -39,7 +44,7 @@ mockService/
     └── logger/log/
 ```
 
-## 部署到 x86_64 Linux 主机
+## Deploy to an x86_64 Linux Host
 
 ```bash
 export SIM_ROOT=/path/to/mockService/uniubi_mock
@@ -57,7 +62,8 @@ sudo cp -a "$SIM_ROOT/product/model/motion" "$MOCK_ROOT/product/model/"
 sudo mkdir -p "$MOCK_ROOT/data/config" "$MOCK_ROOT/data/cache" "$MOCK_ROOT/data/logger/log"
 ```
 
-`vendor` 按平台区分。当前包内容适用于 `x86_64`：
+The `vendor` directory is platform-specific. The current package targets
+`x86_64`:
 
 ```text
 uniubi_mock/vendor/
@@ -66,46 +72,48 @@ uniubi_mock/vendor/
     └── lib/
 ```
 
-部署时请使用同一个平台目录下的 `bin` 和 `lib`。
+Always use `bin` and `lib` from the same platform directory.
 
-## 运行时路径
+## Runtime Paths
 
-服务配置已经写成 `/uniubi_mock` 路径：
+The service configuration already uses `/uniubi_mock` paths:
 
-| 组件 | 运行时路径 |
-| --- | --- |
-| 动态库 | `/uniubi_mock/vendor/usr/lib` |
-| 可执行文件 | `/uniubi_mock/vendor/usr/bin` |
-| UOS 配置 | `/uniubi_mock/etc/uos` |
-| DDS 配置 | `/uniubi_mock/etc/dds` |
-| 产品配置 | `/uniubi_mock/product/mock` |
-| 运控模型 | `/uniubi_mock/product/model/motion` |
-| 缓存 | `/uniubi_mock/data/cache` |
-| 日志 | `/uniubi_mock/data/logger/log` |
+| Component | Runtime path |
+|---|---|
+| Shared libraries | `/uniubi_mock/vendor/usr/lib` |
+| Executables | `/uniubi_mock/vendor/usr/bin` |
+| UOS configuration | `/uniubi_mock/etc/uos` |
+| DDS configuration | `/uniubi_mock/etc/dds` |
+| Product configuration | `/uniubi_mock/product/mock` |
+| Motion models | `/uniubi_mock/product/model/motion` |
+| Cache | `/uniubi_mock/data/cache` |
+| Logs | `/uniubi_mock/data/logger/log` |
 
-相关 RobotService 路径配置如下：
+Relevant RobotService path settings are:
 
-| 运行时行为 | 配置方式 |
-| --- | --- |
-| `motionServer` 配置文件 | 启动参数：`/uniubi_mock/etc/uos/motionServer` |
-| `robotServer` 配置文件 | 启动参数：`/uniubi_mock/etc/uos/robotServer` |
-| `robotMonitorServer` 配置文件 | 启动参数：`-C /uniubi_mock/etc/uos/robotMonitor` |
-| 仿真 host DDS reader/writer | `robotServerCapacity.simulateProxy.ddsConfig` 指向 `/uniubi_mock/etc/uos/robot_simulate_proxy` |
-| DDS XML 路径 | UOS 配置中的 `dds.domain[].url` |
-| 产品配置路径 | UOS 配置中的 `config.defConfigPath` |
-| 模型路径 | `motionServer` 配置中的 `motion.modelDir` |
-| 缓存路径 | `robotServer` 配置中的 `fileCache.path` |
-| 日志路径 | `robotMonitor` 配置中的 `log.logPath` |
+| Runtime behavior | Configuration |
+|---|---|
+| `motionServer` configuration | Startup argument: `/uniubi_mock/etc/uos/motionServer` |
+| `robotServer` configuration | Startup argument: `/uniubi_mock/etc/uos/robotServer` |
+| `robotMonitorServer` configuration | Startup argument: `-C /uniubi_mock/etc/uos/robotMonitor` |
+| Simulation host DDS reader/writer | `robotServerCapacity.simulateProxy.ddsConfig` points to `/uniubi_mock/etc/uos/robot_simulate_proxy` |
+| DDS XML paths | `dds.domain[].url` in the UOS configuration |
+| Product configuration path | `config.defConfigPath` in the UOS configuration |
+| Model path | `motion.modelDir` in the `motionServer` configuration |
+| Cache path | `fileCache.path` in the `robotServer` configuration |
+| Log path | `log.logPath` in the `robotMonitor` configuration |
 
-`robotMonitorServer` 提供日志支持。先启动并保持一个 `robotMonitorServer` 进程，再启动 `motionServer` 和 `robotServer`。
+`robotMonitorServer` provides logging and supervises managed services. Start
+and keep one `robotMonitorServer` process running before starting
+`motionServer` and `robotServer`.
 
-## 启动服务
+## Start the Services
 
 ```bash
 export MOCK_ROOT=/uniubi_mock
 export LD_LIBRARY_PATH=$MOCK_ROOT/vendor/usr/lib:${LD_LIBRARY_PATH}
 
-# monitor 会拉起受管服务，重启时必须先停止 monitor。
+# The monitor starts managed services, so stop it first during a restart.
 sudo pkill -TERM -f "^$MOCK_ROOT/vendor/usr/bin/robotMonitorServer( |$)" || true
 sleep 2
 sudo pkill -KILL -f "^$MOCK_ROOT/vendor/usr/bin/robotMonitorServer( |$)" || true
@@ -126,43 +134,59 @@ sudo env LD_LIBRARY_PATH=$MOCK_ROOT/vendor/usr/lib:${LD_LIBRARY_PATH} \
   $MOCK_ROOT/vendor/usr/bin/robotServer $MOCK_ROOT/etc/uos/robotServer true &
 ```
 
-三个服务必须使用 `sudo` 启动。MotionServer 会创建实时调度线程；普通用户启动时，
-RPC 可能仍能连接，但控制线程会因权限不足而没有运行。建议等待三个服务 ready 后，
-再启动 MuJoCo bridge 和 SDK client。
+All three services must run with `sudo`. `motionServer` creates real-time
+scheduling threads. An unprivileged process may still accept RPC connections
+while its control thread is not running. Wait until all three services are
+ready before starting the MuJoCo bridge and SDK client.
 
-运行时日志由 monitor/log 配置写入 `/uniubi_mock/data/logger/log`。
+The monitor and log configuration writes runtime logs to
+`/uniubi_mock/data/logger/log`.
 
-## Host DDS 网卡配置
+## Host DDS Network Interface Configuration
 
-Host 侧发现和 RobotServer RPC 使用 CycloneDDS host domain，配置文件为：
+Host-side discovery and RobotServer RPC use the Cyclone DDS host domain:
 
 ```text
 /uniubi_mock/etc/dds/host_config.xml
 ```
 
-`robotServer` 的仿真 host proxy 配置在：
+The `robotServer` simulation host proxy is configured in:
 
 ```text
 /uniubi_mock/etc/uos/robot_simulate_proxy
 ```
 
-`robotServerCapacity.simulateProxy.interface` 控制 host domain 延迟绑定的网卡候选列表；mock 包默认包含 `enp1s0`、`eth0`、`wlan0`，需要至少有一个网卡在目标主机中存在且已获取 IPv4 地址。`robot_simulate_proxy` 内部的 DDS XML 路径必须保持为 `/uniubi_mock/etc/dds/host_config.xml`。
+`robotServerCapacity.simulateProxy.interface` specifies candidate interfaces
+for delayed host-domain initialization. The mock package includes `enp1s0`,
+`eth0`, and `wlan0` by default. At least one listed interface must exist on the
+host and have an IPv4 address. The DDS XML path inside `robot_simulate_proxy`
+must remain `/uniubi_mock/etc/dds/host_config.xml`.
 
-这个文件通过 `NetworkInterface name="..."` 依赖目标主机的实际网卡名。第一次在新主机上启动服务前，先检查网卡名：
+The `<NetworkInterface name="...">` entry in `host_config.xml` must match the
+host. Before the first startup on a new host, inspect available interfaces:
 
 ```bash
 ip -br addr
 ```
 
-如果目标主机使用的网卡名没有出现在 `host_config.xml` 中，只修改或新增对应的 `<NetworkInterface name="...">` 条目即可。常见 Linux 网卡名包括 `enp1s0`、`ens33`、`eth0` 和 `wlan0`。
+If the active interface is absent, change or add only the corresponding
+`<NetworkInterface name="...">` entry. Common names include `enp1s0`, `ens33`,
+`eth0`, and `wlan0`.
 
-除了这个 host DDS 网卡名适配项以外，不建议随意修改包内 UOS、DDS 或 product 配置。其他配置值与服务 domain、运行时路径、RPC/event topic 和 mock 产品能力绑定。
+Apart from this host-interface adaptation, do not change the bundled UOS, DDS,
+or product configuration without validating the complete contract. Other
+values are coupled to service domains, runtime paths, RPC and event topics, and
+mock product capabilities.
 
-## 关键配置检查
+## Critical Configuration Checks
 
-`etc/uos/robotServer` 只预初始化本地 motion domain。仿真 host domain、`robotServer` RPC server 和 host EventBus 由 `robotServerCapacity.simulateProxy.ddsConfig` 指向的 `/uniubi_mock/etc/uos/robot_simulate_proxy` 在网卡稳定后延迟初始化。
+`etc/uos/robotServer` initializes only the local motion domain. After the
+network interface becomes stable, the host domain, `robotServer` RPC server,
+and host EventBus are initialized from
+`/uniubi_mock/etc/uos/robot_simulate_proxy`, the file referenced by
+`robotServerCapacity.simulateProxy.ddsConfig`.
 
-`etc/uos/robot_simulate_proxy` 必须保持 host EventBus 双向启用：
+The host EventBus must remain bidirectional:
 
 ```json
 {
@@ -173,19 +197,19 @@ ip -br addr
 }
 ```
 
-`withService=true` 用于接收 `robotServer.discoverDevice.request`。  
-`withClient=true` 用于发布 `robotServer.discoverDevice.response`。
+- `withService=true` receives `robotServer.discoverDevice.request`.
+- `withClient=true` publishes `robotServer.discoverDevice.response`.
 
-DDS domain：
+DDS domains:
 
-| 配置 | Domain | 用途 |
-| --- | --- | --- |
-| `etc/dds/host_config.xml` | `42` | host 侧发现和 RobotServer RPC |
-| `etc/dds/motion_config.xml` | `1` | 本地 motion 服务通信 |
+| Configuration | Domain | Purpose |
+|---|---:|---|
+| `etc/dds/host_config.xml` | `42` | Host discovery and RobotServer RPC |
+| `etc/dds/motion_config.xml` | `1` | Local motion-service communication |
 
-## 校验命令
+## Validation Commands
 
-部署完成后，在目标主机上执行：
+Run these commands on the target host after deployment:
 
 ```bash
 export MOCK_ROOT=/uniubi_mock
@@ -207,37 +231,39 @@ grep -n 'Domain Id' $MOCK_ROOT/etc/dds/motion_config.xml
 grep -n 'NetworkInterface' $MOCK_ROOT/etc/dds/host_config.xml
 ```
 
-## 问题排查
+## Troubleshooting
 
-如果发现流程没有返回设备：
+If discovery does not return a device:
 
-- 确认 `robotServer` 使用 `$MOCK_ROOT/etc/uos/robotServer` 启动。
-- 确认 `robot_simulate_proxy` EventBus 配置了 `withService=true` 和 `withClient=true`。
-- 确认 host client 和 `robotServer` 都使用 host domain `42`。
-- 确认 `host_config.xml` 包含主机用于 host 侧发现的网卡名。
-- 确认 `robotServerCapacity.simulateProxy.ddsConfig` 指向 `/uniubi_mock/etc/uos/robot_simulate_proxy`，且 `simulateProxy.interface` 包含主机实际联调网卡。
-- 确认主机网络允许 multicast。
+- Confirm that `robotServer` uses `$MOCK_ROOT/etc/uos/robotServer`.
+- Confirm that the `robot_simulate_proxy` EventBus sets both
+  `withService=true` and `withClient=true`.
+- Confirm that the host client and `robotServer` both use host domain `42`.
+- Confirm that `host_config.xml` contains the host interface used for discovery.
+- Confirm that `robotServerCapacity.simulateProxy.ddsConfig` points to
+  `/uniubi_mock/etc/uos/robot_simulate_proxy` and that
+  `simulateProxy.interface` contains the active host interface.
+- Confirm that the host network permits multicast traffic.
 
-如果 `robotServer` 无法访问 `motionServer`：
+If `robotServer` cannot reach `motionServer`:
 
-- 确认先启动了 `motionServer`。
-- 确认 `motion_config.xml` 使用 domain `1`。
-- 确认 `lo` 已启用：
+- Start `motionServer` first.
+- Confirm that `motion_config.xml` uses domain `1`.
+- Confirm that loopback is enabled:
 
 ```bash
 ip addr show lo
 sudo ip link set lo up
 ```
 
-如果 `motionServer` 被杀掉后需要重启，重启服务前先清理运行时内存配置：
+If `motionServer` was killed and must be restarted, clear the runtime memory
+configuration first:
 
 ```bash
 sudo rm -f /tmp/memoryConfig
 ```
 
-## 清理
-
-如需从目标主机移除 mock 环境：
+## Remove the Mock Runtime
 
 ```bash
 sudo pkill -TERM -f '^/uniubi_mock/vendor/usr/bin/robotMonitorServer( |$)' || true
@@ -251,4 +277,5 @@ sudo pkill -KILL -f '^/uniubi_mock/vendor/usr/bin/motionServer( |$)' || true
 sudo rm -rf /uniubi_mock
 ```
 
-清理命令只会删除 mock 运行时根目录 `/uniubi_mock`；主机全局的 `/vendor`、`/etc`、`/product` 和 `/data` 目录不属于这个包。
+The cleanup removes only `/uniubi_mock`. It does not remove or modify the
+host's global `/vendor`, `/etc`, `/product`, or `/data` directories.
