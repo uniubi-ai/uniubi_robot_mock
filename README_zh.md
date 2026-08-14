@@ -10,6 +10,31 @@
 > 一个子集，支持的功能和动作没有真机丰富。动作效果、时序、安全行为及相关功能均需
 > 在真实硬件上重新验证。
 
+```mermaid
+flowchart LR
+    APP["用户程序<br/>动作调用 · 状态处理 · 策略推理"]
+
+    subgraph SDK["Uniubi SDK"]
+        CPP["C++ SDK<br/>uniubi_robot_sdk"]
+        PY["Python SDK<br/>uniubi_robot_sdk_py"]
+        LINK["统一观测与控制接口<br/>DDS / RPC"]
+
+        CPP --> LINK
+        PY --> LINK
+    end
+
+    subgraph TARGET["运行目标"]
+        SIM["Mock / Sim2Sim<br/>High-level / Low-level<br/>验证 SDK、消息与控制链路"]
+        ROBOT["Uniubi 真机<br/>High-level：内置运动能力<br/>Low-level：自定义关节控制"]
+    end
+
+    APP -->|"C++"| CPP
+    APP -->|"Python"| PY
+    LINK -->|"仿真网络环境"| SIM
+    LINK -->|"真实设备网络"| ROBOT
+    SIM -.->|"验证通过后迁移"| ROBOT
+```
+
 ## 安装
 
 1. **mock 服务（仅 HighLevel）：**按照 [mock 服务说明](docs/mock_service_zh.md)部署
