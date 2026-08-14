@@ -12,6 +12,31 @@ code can be migrated to a robot with minimal changes.
 > capabilities available on a physical robot, so motion performance, supported
 > features, timing, and safety behavior must be validated again on hardware.
 
+```mermaid
+flowchart LR
+    APP["User application<br/>Action calls · State handling · Policy inference"]
+
+    subgraph SDK["Uniubi SDK"]
+        CPP["C++ SDK<br/>uniubi_robot_sdk"]
+        PY["Python SDK<br/>uniubi_robot_sdk_py"]
+        LINK["Unified observation and control interfaces<br/>DDS / RPC"]
+
+        CPP --> LINK
+        PY --> LINK
+    end
+
+    subgraph TARGET["Runtime target"]
+        SIM["Mock / Sim2Sim<br/>High-level / Low-level<br/>Validate SDK, messages, and control paths"]
+        ROBOT["Uniubi real robot<br/>High-level: built-in motion<br/>Low-level: custom joint control"]
+    end
+
+    APP -->|"C++"| CPP
+    APP -->|"Python"| PY
+    LINK -->|"Simulation network"| SIM
+    LINK -->|"Robot network"| ROBOT
+    SIM -.->|"Migrate after validation"| ROBOT
+```
+
 ## Installation
 
 1. **Mock services (HighLevel only):** deploy
