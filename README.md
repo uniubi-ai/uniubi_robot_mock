@@ -5,7 +5,9 @@
 This repository enables SDK-based HighLevel and LowLevel motion development
 and validation in a simulated environment without a physical robot. The
 simulation uses the same SDK interfaces as real hardware, so validated client
-code can be migrated to a robot with minimal changes.
+code can be migrated to a robot with minimal API changes. The transport and
+deployment topology still change: real-robot LowLevel control is onboard only,
+while external x86_64 LowLevel use selects the simulation backend.
 
 > **Simulation limitations:** Simulation behavior is not equivalent to
 > real-hardware behavior. The simulator implements only a subset of the
@@ -16,25 +18,37 @@ code can be migrated to a robot with minimal changes.
 flowchart LR
     APP["User application<br/>Action calls · State handling · Policy inference"]
 
-    subgraph SDK["Uniubi SDK"]
+    subgraph SDK["Uniubi SDK API"]
         CPP["C++ SDK<br/>uniubi_robot_sdk"]
         PY["Python SDK<br/>uniubi_robot_sdk_py"]
-        LINK["Unified observation and control interfaces<br/>DDS / RPC"]
+        API["Unified High-level / Low-level interfaces"]
 
-        CPP --> LINK
-        PY --> LINK
+        CPP --> API
+        PY --> API
     end
 
-    subgraph TARGET["Runtime target"]
-        SIM["Mock / Sim2Sim<br/>High-level / Low-level<br/>Validate SDK, messages, and control paths"]
-        ROBOT["Uniubi real robot<br/>High-level: built-in motion<br/>Low-level: custom joint control"]
+    subgraph BACKEND["Transport and deployment boundaries"]
+        HL["High-level backend<br/>DDS / RPC<br/>Onboard or external host"]
+        LLR["Low-level real-robot backend<br/>RPC control plane + onboard SHM data plane<br/>Onboard only"]
+        LLS["Low-level external-simulation backend<br/>DDS simulation path<br/>x86_64 host"]
     end
+
+    MOCKHL["Mock High-level<br/>Built-in action scheduling validation"]
+    MOCKLL["Mock / Sim2Sim Low-level<br/>Policy and control-loop validation"]
+    ROBOTHL["Uniubi real-robot High-level<br/>Built-in motion"]
+    ROBOTLL["Uniubi real-robot Low-level<br/>Onboard custom joint control"]
 
     APP -->|"C++"| CPP
     APP -->|"Python"| PY
-    LINK -->|"Simulation network"| SIM
-    LINK -->|"Robot network"| ROBOT
-    SIM -.->|"Migrate after validation"| ROBOT
+    API --> HL
+    API --> LLR
+    API --> LLS
+    HL --> MOCKHL
+    HL --> ROBOTHL
+    LLS --> MOCKLL
+    LLR --> ROBOTLL
+    MOCKHL -.->|"Migrate after validation"| ROBOTHL
+    MOCKLL -.->|"Migrate onboard after validation"| ROBOTLL
 ```
 
 ## Installation
