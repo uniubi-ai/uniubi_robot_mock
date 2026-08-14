@@ -4,7 +4,8 @@
 
 本仓库用于在没有真实机器人的情况下，通过 SDK 在仿真环境中开发和验证 HighLevel
 与 LowLevel 运控功能。仿真与真实硬件保持相同的 SDK 接口，验证完成的客户端代码可
-用最小改动快速迁移到真实机器人。
+用最小 API 改动快速迁移到真实机器人，但底层传输和部署拓扑会变化：LowLevel 真机控制
+仅支持板内部署，外部 x86_64 主机上的 LowLevel 使用仿真 backend。
 
 > **仿真限制：**仿真表现不等同于真机表现，且仿真环境只实现了真实机器人能力的
 > 一个子集，支持的功能和动作没有真机丰富。动作效果、时序、安全行为及相关功能均需
@@ -14,25 +15,37 @@
 flowchart LR
     APP["用户程序<br/>动作调用 · 状态处理 · 策略推理"]
 
-    subgraph SDK["Uniubi SDK"]
+    subgraph SDK["Uniubi SDK API"]
         CPP["C++ SDK<br/>uniubi_robot_sdk"]
         PY["Python SDK<br/>uniubi_robot_sdk_py"]
-        LINK["统一观测与控制接口<br/>DDS / RPC"]
+        API["High-level / Low-level 统一接口"]
 
-        CPP --> LINK
-        PY --> LINK
+        CPP --> API
+        PY --> API
     end
 
-    subgraph TARGET["运行目标"]
-        SIM["Mock / Sim2Sim<br/>High-level / Low-level<br/>验证 SDK、消息与控制链路"]
-        ROBOT["Uniubi 真机<br/>High-level：内置运动能力<br/>Low-level：自定义关节控制"]
+    subgraph BACKEND["底层传输与部署边界"]
+        HL["High-level backend<br/>DDS / RPC<br/>板内或外部主机"]
+        LLR["Low-level 真机 backend<br/>RPC 控制面 + 板内 SHM 数据面<br/>仅板内"]
+        LLS["Low-level external-simulation backend<br/>DDS 仿真链路<br/>x86_64 主机"]
     end
+
+    MOCKHL["Mock High-level<br/>内置动作调度验证"]
+    MOCKLL["Mock / Sim2Sim Low-level<br/>策略与控制闭环验证"]
+    ROBOTHL["Uniubi 真机 High-level<br/>内置运动能力"]
+    ROBOTLL["Uniubi 真机 Low-level<br/>板内自定义关节控制"]
 
     APP -->|"C++"| CPP
     APP -->|"Python"| PY
-    LINK -->|"仿真网络环境"| SIM
-    LINK -->|"真实设备网络"| ROBOT
-    SIM -.->|"验证通过后迁移"| ROBOT
+    API --> HL
+    API --> LLR
+    API --> LLS
+    HL --> MOCKHL
+    HL --> ROBOTHL
+    LLS --> MOCKLL
+    LLR --> ROBOTLL
+    MOCKHL -.->|"验证后迁移"| ROBOTHL
+    MOCKLL -.->|"验证后迁移到板内"| ROBOTLL
 ```
 
 ## 安装
